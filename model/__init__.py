@@ -39,9 +39,9 @@ if __name__ == '__main__':
     import numpy as np
     from data.operators import Resize, Pad
     from utils.tools import flops_info
-    m = build_model('../config/blazeface.yaml').eval()
-    # flops_info(m)
-    # exit(11)
+    m = build_model('../config/blazeface_fpn_ssh.yaml').eval()
+    flops_info(m)
+    exit(11)
 
     # inp = torch.randn((1, 3, 640, 640))
 

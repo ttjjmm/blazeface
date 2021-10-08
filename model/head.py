@@ -108,14 +108,14 @@ def prior_box(min_sizes, steps, clip, image_size, offset):
     for k, f in enumerate(feature_maps):
         min_size = min_sizes[k]
         for i, j in product(range(f[0]), range(f[1])):
-            print(i, j)
+            # print(i, j)
             for min_size_n in min_size:
                 s_kx = min_size_n / image_size[1]
                 s_ky = min_size_n / image_size[0]
                 dense_cx = [x * steps[k] / image_size[1] for x in [j + offset]]
                 dense_cy = [y * steps[k] / image_size[0] for y in [i + offset]]
                 for cy, cx in product(dense_cy, dense_cx):
-                    ic(cy, cx)
+                    # ic(cy, cx)
                     anchors += [cx, cy, s_kx, s_ky]
     # back to torch land
     output = torch.Tensor(anchors).view(-1, 4)

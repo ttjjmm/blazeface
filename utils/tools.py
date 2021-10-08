@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from utils.flops_counter import get_model_complexity_info
-from icecream import ic
+from utils.flops_counter import get_model_complexity_info, flops_to_string, params_to_string
+# from icecream import ic
 
 # class BBoxPostProcess(object):
 #     __shared__ = ['num_classes']
@@ -121,13 +121,13 @@ class SSDBox(object):
                  var_weight=None):
         boxes, scores = preds
         outputs = []
-        ic(prior_boxes.shape)
-        ic(scores.shape)
-
-        ic(boxes.shape)
+        # ic(prior_boxes.shape)
+        # ic(scores.shape)
+        #
+        # ic(boxes.shape)
         prior_box = prior_boxes
         for box, score in zip(boxes, scores):
-            print(prior_box.shape)
+            # print(prior_box.shape)
             pb_w = prior_box[:, 2] - prior_box[:, 0] + self.norm_delta
             pb_h = prior_box[:, 3] - prior_box[:, 1] + self.norm_delta
             pb_x = prior_box[:, 0] + pb_w * 0.5
@@ -158,7 +158,9 @@ class SSDBox(object):
 
 
 def flops_info(model, input_shape=(3, 320, 320)):
-    flops, params = get_model_complexity_info(model, input_shape)
+    flops, params = get_model_complexity_info(model, input_shape, as_strings=False)
+    flops = flops_to_string(flops * 2)
+    params = params_to_string(params)
     split_line = '=' * 30
     print(f'{split_line}\nInput shape: {input_shape}\n'
           f'Flops: {flops}\nParams: {params}\n{split_line}')

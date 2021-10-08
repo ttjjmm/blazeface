@@ -10,7 +10,6 @@ from utils.nms import multiclass_nms
 from icecream import ic
 
 
-
 class BlazeFace(nn.Module):
     """
     BlazeFace: Sub-millisecond Neural Face Detection on Mobile GPUs,
@@ -24,7 +23,7 @@ class BlazeFace(nn.Module):
         self.blaze_head = BlazeHead(**cfg_head)
         self.post_process = SSDBox()
 
-        self.load_weights('../weights/blazeface_fpn_ssh_1000e.pt')
+        # self.load_weights('../weights/blazeface_fpn_ssh_1000e.pt')
 
     def load_weights(self, path):
         ckpt = torch.load(path)
@@ -51,11 +50,11 @@ class BlazeFace(nn.Module):
 
     def inference(self, inputs):
         preds, anchors = self(inputs)
-        ic(anchors.shape)
+        # ic(anchors.shape)
         pred_boxes = decode(preds[0].squeeze(0), anchors, [0.1, 0.2])
-        ic(pred_boxes.shape)
+        # ic(pred_boxes.shape)
         pred_scores = preds[1].squeeze(0)
-        ic(pred_scores.shape)
+        # ic(pred_scores.shape)
 
         det_bboxes, det_labels = multiclass_nms(
             pred_boxes,
@@ -63,7 +62,7 @@ class BlazeFace(nn.Module):
             score_thr=0.6,
             nms_cfg=dict(type='nms', iou_threshold=0.4),
             max_num=1000)
-        ic(det_bboxes.shape, det_labels.shape)
+        # ic(det_bboxes.shape, det_labels.shape)
         dets = det_bboxes * torch.tensor([640, 640, 640, 640, 1])
 
         return dets

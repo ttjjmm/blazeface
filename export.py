@@ -6,7 +6,7 @@ from model import build_model
 
 
 parser = argparse.ArgumentParser(description='export')
-parser.add_argument('--cfg', type=str, default='config/blazeface.yaml',
+parser.add_argument('--cfg', type=str, default='config/blazeface_fpn_ssh.yaml',
                     help='config file path')
 parser.add_argument('--ckpt', type=str, default='weights/blazeface_fpn_ssh_1000e.pt',
                     help='checkpoint file path')

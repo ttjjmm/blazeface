@@ -144,11 +144,11 @@ class SSH(nn.Module):
 
 
 class BlazeNeck(nn.Module):
-    def __init__(self, in_channel, neck_type="None"):
+    def __init__(self, in_channels, neck_type="None"):
         super(BlazeNeck, self).__init__()
         self.neck_type = neck_type
         self.reture_input = False
-        self._out_channels = in_channel
+        self._out_channels = in_channels
         if self.neck_type == 'None':
             self.reture_input = True
         if "fpn" in self.neck_type:

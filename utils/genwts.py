@@ -58,7 +58,7 @@ def main():
     device = 'cuda:0'
 
 
-    net = m = build_model('../config/blazeface.yaml')
+    net = m = build_model('../config/blazeface_fpn_ssh.yaml')
 
     checkpoint = torch.load('../weights/blazeface_fpn_ssh_1000e.pt', map_location=lambda storage, loc: storage)
     net.load_state_dict(checkpoint)

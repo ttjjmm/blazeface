@@ -2,7 +2,7 @@ import torch
 from model import build_model
 
 def convert():
-    m = build_model('/home/tjm/Documents/python/pycharmProjects/blazeface/config/blazeface.yaml')
+    m = build_model('/config/blazeface_fpn_ssh.yaml')
     ckpt = torch.load('/home/tjm/Documents/python/pycharmProjects/blazeface/weights/blazeface_fpn_ssh_1000e.pth')
     from collections import OrderedDict
     new_stat = OrderedDict()
