@@ -195,11 +195,16 @@ class BlazeBlockLite(nn.Module):
         if self.use_pool:
             self.shortcut_pool = nn.MaxPool2d(kernel_size=stride, stride=stride, ceil_mode=True)
         if self.use_pad:
-
-
+            self.channel_pad = ConvBNLayer(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=1, padding=0)
 
     def forward(self, x):
-        pass
+        y = x
+        x = self.conv_pw(self.conv_dw(x))
+        if self.use_pool:
+            y = self.shortcut_pool(y)
+        if self.use_pad:
+            y = self.channel_pad(y)
+        return F.relu(x + y)
 
 
 
@@ -227,8 +232,8 @@ class BlazeNet(nn.Module):
         if double_blaze_filters is None:
             double_blaze_filters = [[48, 24, 96, 2], [96, 24, 96], [96, 24, 96],
                                     [96, 24, 96, 2], [96, 24, 96], [96, 24, 96]]
-
-        if not lite_edition:
+        self.lite_edition = lite_edition
+        if not self.lite_edition:
             conv1_num_filters = blaze_filters[0][0]
             self.conv1 = ConvBNLayer(
                 in_channels=3,
@@ -261,30 +266,55 @@ class BlazeNet(nn.Module):
                 in_channels = v[2]
             # _out_shape.append(in_channels)
         else:
-            pass
-
+            self.convs1 = nn.Sequential(
+                ConvBNLayer(in_channels=3, out_channels=24, kernel_size=5, stride=2, padding=2),
+                BlazeBlockLite(in_channels=24, out_channels=24, stride=1),
+                BlazeBlockLite(in_channels=24, out_channels=28, stride=1),
+                BlazeBlockLite(in_channels=28, out_channels=32, stride=2),
+                BlazeBlockLite(in_channels=32, out_channels=36, stride=1),
+                BlazeBlockLite(in_channels=36, out_channels=42, stride=1),
+                BlazeBlockLite(in_channels=42, out_channels=48, stride=2)
+            )
+            inch = 48
+            self.convs2 = nn.ModuleList()
+            for i in range(5):
+                self.convs2.append(BlazeBlockLite(in_channels=inch, out_channels=inch + 8, stride=1))
+                inch += 8
+            assert inch == 88
+            self.conv3 = BlazeBlockLite(in_channels=88, out_channels=96, stride=2)
+            self.convs4 = nn.ModuleList()
+            for i in range(4):
+                self.convs4.append(BlazeBlockLite(in_channels=96, out_channels=96, stride=1))
 
     def forward(self, inputs):
-        outs = []
-        y = self.conv1(inputs)
-        for block in self.blaze_:
-            y = block(y)
-            outs.append(y)
-        for block in self.double_blaze_:
-            y = block(y)
-            outs.append(y)
-        return [outs[-4], outs[-1]]
-
-
-
-
+        if not self.lite_edition:
+            outs = []
+            y = self.conv1(inputs)
+            for block in self.blaze_:
+                y = block(y)
+                outs.append(y)
+            for block in self.double_blaze_:
+                y = block(y)
+                outs.append(y)
+            return [outs[-4], outs[-1]]
+        else:
+            x = self.convs1(inputs)
+            for conv in self.convs2:
+                x  = conv(x)
+            outs = [x]
+            x = self.conv3(x)
+            for conv in self.convs4:
+                x = conv(x)
+            outs.append(x)
+            return outs
 
 if __name__ == '__main__':
-    m = BlazeNet(act='hard_swish')
+    m = BlazeNet(act='hard_swish', lite_edition=True)
     print(m)
     # print(m.out_shape)
     # for k, v in m.state_dict().items():
     #     print(k, v.shape)
+    inp = torch.randn((1, 3, 320, 320))
     # inp = {'image': torch.randn((1, 3, 320, 320))}
-    # for i in m(inp):
-    #     print(i.shape)
+    for i in m(inp):
+        print(i.shape)
