@@ -171,6 +171,39 @@ class BlazeBlock(nn.Module):
         return F.relu(x + y)
 
 
+
+class BlazeBlockLite(nn.Module):
+    def __init__(self, in_channels, out_channels, stride):
+        super(BlazeBlockLite, self).__init__()
+        assert stride in [1, 2], "Please confirm your stride parameter value!"
+        self.use_pool = not stride == 1
+        self.use_pad = not in_channels == out_channels
+
+        self.conv_dw = ConvBNLayer(in_channels=in_channels,
+                                   out_channels=in_channels,
+                                   kernel_size=3,
+                                   stride=stride,
+                                   padding=1,
+                                   num_groups=in_channels)
+
+        self.conv_pw = ConvBNLayer(in_channels=in_channels,
+                                   out_channels=out_channels,
+                                   kernel_size=1,
+                                   stride=1,
+                                   padding=0,
+                                   num_groups=1)
+        if self.use_pool:
+            self.shortcut_pool = nn.MaxPool2d(kernel_size=stride, stride=stride, ceil_mode=True)
+        if self.use_pad:
+
+
+
+    def forward(self, x):
+        pass
+
+
+
+
 class BlazeNet(nn.Module):
     """
     BlazeFace, see https://arxiv.org/abs/1907.05047
@@ -181,7 +214,12 @@ class BlazeNet(nn.Module):
         use_5x5kernel (bool): whether or not filter size is 5x5 in depth-wise conv.
     """
 
-    def __init__(self, blaze_filters=None, double_blaze_filters=None, use_5x5kernel=True, act=None):
+    def __init__(self,
+                 blaze_filters=None,
+                 double_blaze_filters=None,
+                 use_5x5kernel=True,
+                 lite_edition=False,
+                 act=None):
         super(BlazeNet, self).__init__()
 
         if blaze_filters is None:
@@ -190,37 +228,41 @@ class BlazeNet(nn.Module):
             double_blaze_filters = [[48, 24, 96, 2], [96, 24, 96], [96, 24, 96],
                                     [96, 24, 96, 2], [96, 24, 96], [96, 24, 96]]
 
-        conv1_num_filters = blaze_filters[0][0]
-        self.conv1 = ConvBNLayer(
-            in_channels=3,
-            out_channels=conv1_num_filters,
-            kernel_size=3,
-            stride=2,
-            padding=1)
+        if not lite_edition:
+            conv1_num_filters = blaze_filters[0][0]
+            self.conv1 = ConvBNLayer(
+                in_channels=3,
+                out_channels=conv1_num_filters,
+                kernel_size=3,
+                stride=2,
+                padding=1)
 
-        in_channels = conv1_num_filters
-        self.blaze_ = nn.ModuleList()
-        self.double_blaze_ = nn.ModuleList()
-        # _out_shape = []
-        for k, v in enumerate(blaze_filters):
-            assert len(v) in [2, 3], "blaze_filters {} not in [2, 3]"
-            if len(v) == 2:
-                self.blaze_.append(
-                    BlazeBlock(in_channels, v[0], v[1], use_5x5kernel=use_5x5kernel, act=act))
-            elif len(v) == 3:
-                self.blaze_.append(BlazeBlock( in_channels, v[0], v[1], stride=v[2], use_5x5kernel=use_5x5kernel, act=act))
-            in_channels = v[1]
+            in_channels = conv1_num_filters
+            self.blaze_ = nn.ModuleList()
+            self.double_blaze_ = nn.ModuleList()
+            # _out_shape = []
+            for k, v in enumerate(blaze_filters):
+                assert len(v) in [2, 3], "blaze_filters {} not in [2, 3]"
+                if len(v) == 2:
+                    self.blaze_.append(
+                        BlazeBlock(in_channels, v[0], v[1], use_5x5kernel=use_5x5kernel, act=act))
+                elif len(v) == 3:
+                    self.blaze_.append(BlazeBlock( in_channels, v[0], v[1], stride=v[2], use_5x5kernel=use_5x5kernel, act=act))
+                in_channels = v[1]
 
-        for k, v in enumerate(double_blaze_filters):
-            assert len(v) in [3, 4], "blaze_filters {} not in [3, 4]"
-            if len(v) == 3:
-                self.double_blaze_.append(
-                    BlazeBlock(in_channels, v[0], v[1], double_channels=v[2], use_5x5kernel=use_5x5kernel, act=act))
-            elif len(v) == 4:
-                self.double_blaze_.append(
-                   BlazeBlock(in_channels, v[0], v[1], double_channels=v[2],  stride=v[3], use_5x5kernel=use_5x5kernel, act=act))
-            in_channels = v[2]
+            for k, v in enumerate(double_blaze_filters):
+                assert len(v) in [3, 4], "blaze_filters {} not in [3, 4]"
+                if len(v) == 3:
+                    self.double_blaze_.append(
+                        BlazeBlock(in_channels, v[0], v[1], double_channels=v[2], use_5x5kernel=use_5x5kernel, act=act))
+                elif len(v) == 4:
+                    self.double_blaze_.append(
+                       BlazeBlock(in_channels, v[0], v[1], double_channels=v[2],  stride=v[3], use_5x5kernel=use_5x5kernel, act=act))
+                in_channels = v[2]
             # _out_shape.append(in_channels)
+        else:
+            pass
+
 
     def forward(self, inputs):
         outs = []
@@ -232,6 +274,9 @@ class BlazeNet(nn.Module):
             y = block(y)
             outs.append(y)
         return [outs[-4], outs[-1]]
+
+
+
 
 
 if __name__ == '__main__':
