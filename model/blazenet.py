@@ -208,7 +208,6 @@ class BlazeBlockLite(nn.Module):
 
 
 
-
 class BlazeNet(nn.Module):
     """
     BlazeFace, see https://arxiv.org/abs/1907.05047

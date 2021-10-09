@@ -7,7 +7,7 @@ from model.head import BlazeHead
 from utils.tools import SSDBox
 from utils.nms import multiclass_nms
 
-from icecream import ic
+# from icecream import ic
 
 
 class BlazeFace(nn.Module):
@@ -18,12 +18,15 @@ class BlazeFace(nn.Module):
     def __init__(self, cfg_backbone, cfg_neck, cfg_head, cfg_post_process):
         super(BlazeFace, self).__init__()
         self.backbone = BlazeNet(**cfg_backbone)
-        self.neck = BlazeNeck(**cfg_neck)
+        self.is_neck = cfg_neck is not None
+        if self.is_neck:
+            self.neck = BlazeNeck(**cfg_neck)
 
         self.blaze_head = BlazeHead(**cfg_head)
         self.post_process = SSDBox()
 
-        # self.load_weights('../weights/blazeface_fpn_ssh_1000e.pt')
+        # self.load_weights('../weights/blazeface_1000e.pt')
+        self.load_weights('../weights/blazeface_fpn_ssh_1000e.pt')
 
     def load_weights(self, path):
         ckpt = torch.load(path)
@@ -34,18 +37,19 @@ class BlazeFace(nn.Module):
 
     def forward(self, inputs):
         # Backbone
-        body_feats = self.backbone(inputs)
+        feats = self.backbone(inputs)
         # neck
-        neck_feats = self.neck(body_feats)
+        if self.is_neck:
+            feats = self.neck(feats)
         # head_feats = self.blaze_head(neck_feats)
         # return head_feats
         # blaze Head
         if self.training:
-            return self.blaze_head(neck_feats,
+            return self.blaze_head(feats,
                                    inputs['gt_bbox'],
                                    inputs['gt_class'])
         else:
-            preds, anchors = self.blaze_head(neck_feats) # preds => [box, cls]
+            preds, anchors = self.blaze_head(feats) # preds => [box, cls]
             return preds, anchors
 
     def inference(self, inputs):
@@ -63,7 +67,7 @@ class BlazeFace(nn.Module):
             nms_cfg=dict(type='nms', iou_threshold=0.4),
             max_num=1000)
         # ic(det_bboxes.shape, det_labels.shape)
-        dets = det_bboxes * torch.tensor([640, 640, 640, 640, 1])
+        dets = det_bboxes * torch.tensor([640, 640, 640, 640, 1], device=inputs.device)
 
         return dets
 

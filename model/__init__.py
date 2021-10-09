@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
-
 from model.blazeface import BlazeFace
 import yaml
 import torch
+
 
 def load_config(cfg_path):
     config = yaml.load(open(cfg_path, 'rb'), Loader=yaml.Loader)
@@ -13,15 +13,16 @@ def build_model(cfg_path):
     config = load_config(cfg_path)
     arch = config.pop('architecture')
     if arch in config:
-        backbone = config[arch]['backbone']
-        neck = config[arch]['neck']
-        head = config[arch]['head']
-        postprocess = config[arch]['post_process']
+        arch_cfg = config[arch]
+        backbone = arch_cfg['backbone']
+        neck = arch_cfg['neck'] if 'neck' in arch_cfg else None
+        head = arch_cfg['head']
+        postprocess = arch_cfg['post_process']
     else:
         raise AttributeError("object has no attribute '{}'".format(arch))
 
     cfg_backbone = config[backbone]
-    cfg_neck = config[neck]
+    cfg_neck = config[neck] if neck else None
     cfg_head = config[head]
     cfg_postprocess = config[postprocess]
     cfg_head['cfg_anchor'] = {'steps': [8, 16],
@@ -39,9 +40,11 @@ if __name__ == '__main__':
     import numpy as np
     from data.operators import Resize, Pad
     from utils.tools import flops_info
-    m = build_model('../config/blazeface_fpn_ssh.yaml').eval()
-    flops_info(m)
-    exit(11)
+    m = build_model('../config/blazeface_fpn_ssh.yaml').eval().to('cuda:0')
+    # for k, v in m.state_dict().items():
+    #     print(k, v.shape)
+    # flops_info(m)
+    # exit(11)
 
     # inp = torch.randn((1, 3, 640, 640))
 
@@ -71,6 +74,7 @@ if __name__ == '__main__':
     data['image'] = img
 
     with torch.no_grad():
+        img = img.to('cuda:0')
         x = m.inference(img)
 
     for b in x:

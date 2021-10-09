@@ -7,7 +7,7 @@ import six
 from itertools import product as product
 from utils.loss import SSDLoss
 
-from icecream import ic
+# from icecream import ic
 
 
 class BlazeHead(nn.Module):
@@ -89,6 +89,8 @@ class BlazeHead(nn.Module):
         cls_scores = torch.cat(cls_scores, dim=1)
         if not torch.onnx.is_in_onnx_export():
             prior_boxes = self.anchor_generator()
+            device = box_preds.device
+            prior_boxes = prior_boxes.to(device)
 
         if self.training:
             return self.get_loss(box_preds, cls_scores, gt_bbox, gt_class, prior_boxes)
