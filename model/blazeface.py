@@ -26,7 +26,7 @@ class BlazeFace(nn.Module):
         self.post_process = SSDBox()
 
         # self.load_weights('../weights/blazeface_1000e.pt')
-        self.load_weights('../weights/blazeface_fpn_ssh_1000e.pt')
+        self.load_weights('./weights/blazeface_fpn_ssh_1000e.pt')
 
     def load_weights(self, path):
         ckpt = torch.load(path)
