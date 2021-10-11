@@ -197,6 +197,121 @@ class Pad(object):
 
 
 
+class RandomDistort(object):
+    """Random color distortion.
+    Args:
+        hue (list): hue settings. in [lower, upper, probability] format.
+        saturation (list): saturation settings. in [lower, upper, probability] format.
+        contrast (list): contrast settings. in [lower, upper, probability] format.
+        brightness (list): brightness settings. in [lower, upper, probability] format.
+        random_apply (bool): whether to apply in random (yolo) or fixed (SSD)
+            order.
+        count (int): the number of doing distrot
+        random_channel (bool): whether to swap channels randomly
+    """
+
+    def __init__(self,
+                 hue=[-18, 18, 0.5],
+                 saturation=[0.5, 1.5, 0.5],
+                 contrast=[0.5, 1.5, 0.5],
+                 brightness=[0.5, 1.5, 0.5],
+                 random_apply=True,
+                 count=4,
+                 random_channel=False):
+        super(RandomDistort, self).__init__()
+        self.hue = hue
+        self.saturation = saturation
+        self.contrast = contrast
+        self.brightness = brightness
+        self.random_apply = random_apply
+        self.count = count
+        self.random_channel = random_channel
+
+    def apply_hue(self, img):
+        low, high, prob = self.hue
+        if np.random.uniform(0., 1.) < prob:
+            return img
+
+        img = img.astype(np.float32)
+        # it works, but result differ from HSV version
+        delta = np.random.uniform(low, high)
+        u = np.cos(delta * np.pi)
+        w = np.sin(delta * np.pi)
+        bt = np.array([[1.0, 0.0, 0.0], [0.0, u, -w], [0.0, w, u]])
+        tyiq = np.array([[0.299, 0.587, 0.114], [0.596, -0.274, -0.321],
+                         [0.211, -0.523, 0.311]])
+        ityiq = np.array([[1.0, 0.956, 0.621], [1.0, -0.272, -0.647],
+                          [1.0, -1.107, 1.705]])
+        t = np.dot(np.dot(ityiq, bt), tyiq).T
+        img = np.dot(img, t)
+        return img
+
+    def apply_saturation(self, img):
+        low, high, prob = self.saturation
+        if np.random.uniform(0., 1.) < prob:
+            return img
+        delta = np.random.uniform(low, high)
+        img = img.astype(np.float32)
+        # it works, but result differ from HSV version
+        gray = img * np.array([[[0.299, 0.587, 0.114]]], dtype=np.float32)
+        gray = gray.sum(axis=2, keepdims=True)
+        gray *= (1.0 - delta)
+        img *= delta
+        img += gray
+        return img
+
+    def apply_contrast(self, img):
+        low, high, prob = self.contrast
+        if np.random.uniform(0., 1.) < prob:
+            return img
+        delta = np.random.uniform(low, high)
+        img = img.astype(np.float32)
+        img *= delta
+        return img
+
+    def apply_brightness(self, img):
+        low, high, prob = self.brightness
+        if np.random.uniform(0., 1.) < prob:
+            return img
+        delta = np.random.uniform(low, high)
+        img = img.astype(np.float32)
+        img += delta
+        return img
+
+    def __call__(self, sample):
+        img = sample['image']
+        if self.random_apply:
+            functions = [
+                self.apply_brightness, self.apply_contrast,
+                self.apply_saturation, self.apply_hue
+            ]
+            distortions = np.random.permutation(functions)[:self.count]
+            for func in distortions:
+                img = func(img)
+            sample['image'] = img
+            return sample
+
+        img = self.apply_brightness(img)
+        mode = np.random.randint(0, 2)
+
+        if mode:
+            img = self.apply_contrast(img)
+
+        img = self.apply_saturation(img)
+        img = self.apply_hue(img)
+
+        if not mode:
+            img = self.apply_contrast(img)
+
+        if self.random_channel:
+            if np.random.randint(0, 2):
+                img = img[..., np.random.permutation(3)]
+        sample['image'] = img
+        return sample
+
+
+
+
 
 
 if __name__ == '__main__':

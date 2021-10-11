@@ -85,7 +85,6 @@ def convert2():
     }
 
 
-
     new_dict = OrderedDict()
     m = build_model('../config/blazeface.yaml')
     ckpt = torch.load('/home/ubuntu/Documents/pycharm/blazeface/weights/blazeface_1000e.pth')

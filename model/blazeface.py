@@ -25,15 +25,14 @@ class BlazeFace(nn.Module):
         self.blaze_head = BlazeHead(**cfg_head)
         self.post_process = SSDBox()
 
-        # self.load_weights('../weights/blazeface_1000e.pt')
-        self.load_weights('./weights/blazeface_fpn_ssh_1000e.pt')
+        self.load_weights('./weights/blazeface_1000e.pt')
+        # self.load_weights('./weights/blazeface_fpn_ssh_1000e.pt')
 
     def load_weights(self, path):
         ckpt = torch.load(path)
         self.load_state_dict(ckpt, strict=True)
         print('=> loaded pretrained weights from path: {}.'.format(path))
         del ckpt
-
 
     def forward(self, inputs):
         # Backbone
@@ -63,7 +62,7 @@ class BlazeFace(nn.Module):
         det_bboxes, det_labels = multiclass_nms(
             pred_boxes,
             pred_scores,
-            score_thr=0.6,
+            score_thr=0.1,
             nms_cfg=dict(type='nms', iou_threshold=0.4),
             max_num=1000)
         # ic(det_bboxes.shape, det_labels.shape)

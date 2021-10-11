@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, default='config/blazeface_fpn_ssh.yaml',
+    parser.add_argument('--cfg', type=str, default='config/blazeface.yaml',
                         help='model configuration file path')
     parser.add_argument('--device', type=str, default='cuda:0',
                         help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -81,8 +81,6 @@ class FaceDetector(object):
 
 
         return 0
-
-
 
 
 
