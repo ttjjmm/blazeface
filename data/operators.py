@@ -245,6 +245,184 @@ class Pad(object):
         return sample
 
 
+class RandomCrop(object):
+    """Random crop image and bboxes.
+    Args:
+        aspect_ratio (list): aspect ratio of cropped region.
+            in [min, max] format.
+        thresholds (list): iou thresholds for decide a valid bbox crop.
+        scaling (list): ratio between a cropped region and the original image.
+             in [min, max] format.
+        num_attempts (int): number of tries before giving up.
+        allow_no_crop (bool): allow return without actually cropping them.
+        cover_all_box (bool): ensure all bboxes are covered in the final crop.
+        is_mask_crop(bool): whether crop the segmentation.
+    """
+
+    def __init__(self,
+                 aspect_ratio=[.5, 2.],
+                 thresholds=[.0, .1, .3, .5, .7, .9],
+                 scaling=[.3, 1.],
+                 num_attempts=50,
+                 allow_no_crop=True,
+                 cover_all_box=False,
+                 is_mask_crop=False):
+        super(RandomCrop, self).__init__()
+        self.aspect_ratio = aspect_ratio
+        self.thresholds = thresholds
+        self.scaling = scaling
+        self.num_attempts = num_attempts
+        self.allow_no_crop = allow_no_crop
+        self.cover_all_box = cover_all_box
+        self.is_mask_crop = is_mask_crop
+
+
+
+    def apply(self, sample, context=None):
+        if 'gt_bbox' in sample and len(sample['gt_bbox']) == 0:
+            return sample
+
+        h, w = sample['image'].shape[:2]
+        gt_bbox = sample['gt_bbox']
+
+        # NOTE Original method attempts to generate one candidate for each
+        # threshold then randomly sample one from the resulting list.
+        # Here a short circuit approach is taken, i.e., randomly choose a
+        # threshold and attempt to find a valid crop, and simply return the
+        # first one found.
+        # The probability is not exactly the same, kinda resembling the
+        # "Monty Hall" problem. Actually carrying out the attempts will affect
+        # observability (just like opening doors in the "Monty Hall" game).
+        thresholds = list(self.thresholds)
+        if self.allow_no_crop:
+            thresholds.append('no_crop')
+        np.random.shuffle(thresholds)
+
+        for thresh in thresholds:
+            if thresh == 'no_crop':
+                return sample
+
+            found = False
+            for i in range(self.num_attempts):
+                scale = np.random.uniform(*self.scaling)
+                if self.aspect_ratio is not None:
+                    min_ar, max_ar = self.aspect_ratio
+                    aspect_ratio = np.random.uniform(
+                        max(min_ar, scale**2), min(max_ar, scale**-2))
+                    h_scale = scale / np.sqrt(aspect_ratio)
+                    w_scale = scale * np.sqrt(aspect_ratio)
+                else:
+                    h_scale = np.random.uniform(*self.scaling)
+                    w_scale = np.random.uniform(*self.scaling)
+                crop_h = h * h_scale
+                crop_w = w * w_scale
+                if self.aspect_ratio is None:
+                    if crop_h / crop_w < 0.5 or crop_h / crop_w > 2.0:
+                        continue
+
+                crop_h = int(crop_h)
+                crop_w = int(crop_w)
+                crop_y = np.random.randint(0, h - crop_h)
+                crop_x = np.random.randint(0, w - crop_w)
+                crop_box = [crop_x, crop_y, crop_x + crop_w, crop_y + crop_h]
+                iou = self._iou_matrix(
+                    gt_bbox, np.array(
+                        [crop_box], dtype=np.float32))
+                if iou.max() < thresh:
+                    continue
+
+                if self.cover_all_box and iou.min() < thresh:
+                    continue
+
+                cropped_box, valid_ids = self._crop_box_with_center_constraint(
+                    gt_bbox, np.array(
+                        crop_box, dtype=np.float32))
+                if valid_ids.size > 0:
+                    found = True
+                    break
+
+            if found:
+                if self.is_mask_crop and 'gt_poly' in sample and len(sample[
+                        'gt_poly']) > 0:
+                    crop_polys = self.crop_segms(
+                        sample['gt_poly'],
+                        valid_ids,
+                        np.array(
+                            crop_box, dtype=np.int64),
+                        h,
+                        w)
+                    if [] in crop_polys:
+                        delete_id = list()
+                        valid_polys = list()
+                        for id, crop_poly in enumerate(crop_polys):
+                            if crop_poly == []:
+                                delete_id.append(id)
+                            else:
+                                valid_polys.append(crop_poly)
+                        valid_ids = np.delete(valid_ids, delete_id)
+                        if len(valid_polys) == 0:
+                            return sample
+                        sample['gt_poly'] = valid_polys
+                    else:
+                        sample['gt_poly'] = crop_polys
+
+                if 'gt_segm' in sample:
+                    sample['gt_segm'] = self._crop_segm(sample['gt_segm'],
+                                                        crop_box)
+                    sample['gt_segm'] = np.take(
+                        sample['gt_segm'], valid_ids, axis=0)
+
+                sample['image'] = self._crop_image(sample['image'], crop_box)
+                sample['gt_bbox'] = np.take(cropped_box, valid_ids, axis=0)
+                sample['gt_class'] = np.take(
+                    sample['gt_class'], valid_ids, axis=0)
+                if 'gt_score' in sample:
+                    sample['gt_score'] = np.take(
+                        sample['gt_score'], valid_ids, axis=0)
+
+                if 'is_crowd' in sample:
+                    sample['is_crowd'] = np.take(
+                        sample['is_crowd'], valid_ids, axis=0)
+                return sample
+
+        return sample
+
+    def _iou_matrix(self, a, b):
+        tl_i = np.maximum(a[:, np.newaxis, :2], b[:, :2])
+        br_i = np.minimum(a[:, np.newaxis, 2:], b[:, 2:])
+
+        area_i = np.prod(br_i - tl_i, axis=2) * (tl_i < br_i).all(axis=2)
+        area_a = np.prod(a[:, 2:] - a[:, :2], axis=1)
+        area_b = np.prod(b[:, 2:] - b[:, :2], axis=1)
+        area_o = (area_a[:, np.newaxis] + area_b - area_i)
+        return area_i / (area_o + 1e-10)
+
+    def _crop_box_with_center_constraint(self, box, crop):
+        cropped_box = box.copy()
+
+        cropped_box[:, :2] = np.maximum(box[:, :2], crop[:2])
+        cropped_box[:, 2:] = np.minimum(box[:, 2:], crop[2:])
+        cropped_box[:, :2] -= crop[:2]
+        cropped_box[:, 2:] -= crop[:2]
+
+        centers = (box[:, :2] + box[:, 2:]) / 2
+        valid = np.logical_and(crop[:2] <= centers,
+                               centers < crop[2:]).all(axis=1)
+        valid = np.logical_and(
+            valid, (cropped_box[:, :2] < cropped_box[:, 2:]).all(axis=1))
+
+        return cropped_box, np.where(valid)[0]
+
+    def _crop_image(self, img, crop):
+        x1, y1, x2, y2 = crop
+        return img[y1:y2, x1:x2, :]
+
+    def _crop_segm(self, segm, crop):
+        x1, y1, x2, y2 = crop
+        return segm[:, y1:y2, x1:x2]
+
+
+
 
 class RandomDistort(object):
     """Random color distortion.
