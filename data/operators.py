@@ -58,6 +58,13 @@ class Resize(object):
         bbox[:, 1::2] = np.clip(bbox[:, 1::2], 0, resize_h)
         return bbox
 
+    # @staticmethod
+    # def apply_keypoint(keypoints, scale, size):
+    #     im_scale_x, im_scale_y = scale
+    #     resize_w, resize_h = size
+
+
+
     def __call__(self, sample):
         """ Resize the image numpy.
         """
@@ -308,9 +315,6 @@ class RandomDistort(object):
                 img = img[..., np.random.permutation(3)]
         sample['image'] = img
         return sample
-
-
-
 
 
 
