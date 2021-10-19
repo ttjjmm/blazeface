@@ -131,18 +131,16 @@ class WiderFaceDataset(Dataset):
 
 
     def get_ann_info(self, idx):
-
         data_info = self.data_infos[idx]
-
         bboxes = []
-        keypointss = []
+        keypoints = []
         labels = []
         bboxes_ignore = []
         labels_ignore = []
         for obj in data_info['objs']:
             label = self.cat2label[obj['cat']]
             bbox = obj['bbox']
-            keypoints = obj['kps']
+            kps = obj['kps']
             ignore = obj['ignore']
             if ignore:
                 bboxes_ignore.append(bbox)
@@ -150,16 +148,18 @@ class WiderFaceDataset(Dataset):
             else:
                 bboxes.append(bbox)
                 labels.append(label)
-                keypointss.append(keypoints)
+                keypoints.append(kps)
+
         if not bboxes:
             bboxes = np.zeros((0, 4))
             labels = np.zeros((0,))
-            keypointss = np.zeros((0, self.NK, 3))
+            keypoints = np.zeros((0, self.NK, 3)) if self.with_kp else None
         else:
             # bboxes = np.array(bboxes, ndmin=2) - 1
             bboxes = np.array(bboxes, ndmin=2)
             labels = np.array(labels)
-            keypointss = np.array(keypointss, ndmin=3)
+            keypoints = np.array(keypoints, ndmin=3) if self.with_kp else None
+
         if not bboxes_ignore:
             bboxes_ignore = np.zeros((0, 4))
             labels_ignore = np.zeros((0,))
@@ -170,7 +170,7 @@ class WiderFaceDataset(Dataset):
         ann = dict(
             bboxes=bboxes.astype(np.float32),
             labels=labels.astype(np.int64),
-            keypointss=keypointss.astype(np.float32),
+            keypoints=keypoints.astype(np.float32) if keypoints is not None else None,
             bboxes_ignore=bboxes_ignore.astype(np.float32),
             labels_ignore=labels_ignore.astype(np.int64))
         return ann
@@ -192,17 +192,17 @@ class WiderFaceDataset(Dataset):
         annos = self.get_ann_info(idx)
 
         bbox = annos['bboxes'].astype(np.int32)
-        keypoint = annos['keypointss'].astype(np.int32)
+        # keypoint = annos['keypoints'].astype(np.int32)
         for i in bbox:
             cv2.rectangle(img, (i[0], i[1]), (i[2], i[3]), (255, 0, 0), cv2.LINE_4)
 
-        for i in keypoint[0]:
-            cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255))
+        # for i in keypoint[0]:
+        #     cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255))
         plt.imshow(img)
         plt.show()
 
 
-        print(annos)
+        ic(annos)
 
 
 
@@ -212,7 +212,7 @@ class WiderFaceDataset(Dataset):
 
 if __name__ == '__main__':
     data_p = '/home/ubuntu/Documents/pycharm/blazeface/data/widerface'
-    data = WiderFaceDataset(data_p, mode='train', min_size=20, with_kp=False)
+    data = WiderFaceDataset(data_p, mode='train', min_size=None, with_kp=False)
     x = data[12]
     print(x)
 

@@ -16,6 +16,22 @@ class ImageError(ValueError):
     pass
 
 
+
+class Pipeline(object):
+    def __init__(self, operators: dict=None, ):
+        self.ops = [eval(k)(**v) for k, v in operators.items()]
+
+        # print(self.ops)
+
+    def __call__(self, data):
+        """
+        data format: {'image': np.array, 'gt_bbox': np.array}
+        """
+        for op in self.ops:
+            data = op(data)
+        return data
+
+
 class Resize(object):
     def __init__(self, target_size, keep_ratio=True, interp=cv2.INTER_LINEAR):
         """
@@ -62,7 +78,6 @@ class Resize(object):
     # def apply_keypoint(keypoints, scale, size):
     #     im_scale_x, im_scale_y = scale
     #     resize_w, resize_h = size
-
 
 
     def __call__(self, sample):
@@ -171,7 +186,7 @@ class Pad(object):
     def __call__(self, sample):
         im = sample['image']
         im_h, im_w = im.shape[:2]
-        #TODO
+
         if self.size:
             h, w = self.size
             assert (im_h < h or im_w < w), '(h, w) of target size should be greater than (im_h, im_w)'
@@ -320,14 +335,25 @@ class RandomDistort(object):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    img = cv2.imread('/home/tjm/Documents/python/pycharmProjects/blazeface/samples/test.jpg')
+    img = cv2.imread('/home/ubuntu/Documents/pycharm/blazeface/samples/test.jpg')
+
+    kyw = {
+        'Resize': {'target_size': (640, 640), 'keep_ratio': True}
+    }
+    p = Pipeline(operators=kyw)
     data = {'image': img}
-    r = Resize([640, 640])
-    p = Pad([640, 640])
-    data = r(data)
     data = p(data)
-    plt.imshow(data['image'])
+    # r = Resize([640, 640])
+    # p = Pad([640, 640])
+    # data = r(data)
+    # data = p(data)
+    plt.imshow(data['image'].astype(np.uint8))
     plt.show()
     print(data['image'].shape)
+
+
+# if __name__ == '__main__':
+
+#     p = Pipeline(operators=kyw)
 
 
