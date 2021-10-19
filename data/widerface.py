@@ -7,6 +7,9 @@ from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 from icecream import ic
 
+
+from operators import Pipeline
+
 from tqdm import tqdm
 
 #TODO
@@ -41,6 +44,12 @@ class WiderFaceDataset(Dataset):
         # print(self.anno_info)
         # print(self.label_path, self.img_path)
         # self.load_annotations(self.label_path)
+
+        kyw = {
+            'Resize': {'target_size': (640, 640), 'keep_ratio': True}
+        }
+        self.aug_pipeline = Pipeline(kyw)
+
 
 
     def _parse_ann_line(self, line):
@@ -191,7 +200,18 @@ class WiderFaceDataset(Dataset):
 
         annos = self.get_ann_info(idx)
 
-        bbox = annos['bboxes'].astype(np.int32)
+        bbox = annos['bboxes']
+        data = {
+            'image': img, 'gt_bbox': bbox
+        }
+        data = self.aug_pipeline(data)
+
+        print(data)
+        # exit(11)
+
+        img = data['image'].astype(np.uint8)
+
+        bbox = data['gt_bbox'].astype(np.int32)
         # keypoint = annos['keypoints'].astype(np.int32)
         for i in bbox:
             cv2.rectangle(img, (i[0], i[1]), (i[2], i[3]), (255, 0, 0), cv2.LINE_4)

@@ -6,6 +6,9 @@ except Exception:
 from numbers import Number, Integral
 import cv2
 import numpy as np
+from icecream import ic
+
+__all__ = ['Pipeline', 'Resize', 'Pad', 'RandomDistort']
 
 
 class BboxError(ValueError):
@@ -18,10 +21,10 @@ class ImageError(ValueError):
 
 
 class Pipeline(object):
-    def __init__(self, operators: dict=None, ):
+    def __init__(self, operators: dict=None):
+        assert isinstance(operators, dict), 'Wrong Data Augmentation Pipeline!'
         self.ops = [eval(k)(**v) for k, v in operators.items()]
 
-        # print(self.ops)
 
     def __call__(self, data):
         """
@@ -33,7 +36,7 @@ class Pipeline(object):
 
 
 class Resize(object):
-    def __init__(self, target_size, keep_ratio=True, interp=cv2.INTER_LINEAR):
+    def __init__(self, target_size, keep_ratio=True, keep_size=True, pad_value=(128.5, 128.5, 128.5), interp=cv2.INTER_LINEAR):
         """
         Resize image to target size. if keep_ratio is True,
         resize the image's long side to the maximum of target_size
@@ -44,8 +47,10 @@ class Resize(object):
             interp (int): the interpolation method
         """
         self.keep_ratio = keep_ratio
+        self.keep_size = keep_size
+        self.pad_value = pad_value
         self.interp = interp
-
+        self.pad_size = None
         if not isinstance(target_size, (Integral, Sequence)):
             raise TypeError(
                 "Type of target_size is invalid. Must be Integer or List or Tuple, now is {}".
@@ -54,22 +59,39 @@ class Resize(object):
             target_size = [target_size, target_size]
         self.target_size = target_size
 
-    def apply_image(self, image, scale):
+    def apply_image(self, image, scale, pad_size):
         im_scale_x, im_scale_y = scale
-        return cv2.resize(
+        image = cv2.resize(
             image,
             None,
             None,
             fx=im_scale_x,
             fy=im_scale_y,
             interpolation=self.interp)
+        plt.imshow(image)
+        plt.show()
+        if self.keep_size:
+            h, w = image.shape[:2]
+            ic(image.shape)
+            ic(pad_size)
+            canvas = np.ones((self.target_size[1], self.target_size[0], 3), dtype=np.float32)
+            canvas *= np.array(self.pad_value, dtype=np.float32)
+            canvas[pad_size[1]: pad_size[1] + h, pad_size[0]: pad_size[0] + w, :] = image
+            return canvas
+        else:
+            return image
 
-    @staticmethod
-    def apply_bbox(bbox, scale, size):
+
+    def apply_bbox(self, bbox, scale, size):
         im_scale_x, im_scale_y = scale
         resize_w, resize_h = size
         bbox[:, 0::2] *= im_scale_x
         bbox[:, 1::2] *= im_scale_y
+
+        if self.keep_size:
+            bbox[:, 0::2] += self.pad_size[0]
+            bbox[:, 1::2] += self.pad_size[1]
+
         bbox[:, 0::2] = np.clip(bbox[:, 0::2], 0, resize_w)
         bbox[:, 1::2] = np.clip(bbox[:, 1::2], 0, resize_h)
         return bbox
@@ -104,15 +126,20 @@ class Resize(object):
             resize_h = im_scale * float(im_shape[0])
             resize_w = im_scale * float(im_shape[1])
 
+            pad_h = int((self.target_size[1] - resize_h) // 2)
+            pad_w = int((self.target_size[0] - resize_w) // 2)
+            self.pad_size = (pad_w, pad_h)
             im_scale_x = im_scale
             im_scale_y = im_scale
         else:
             resize_h, resize_w = self.target_size
             im_scale_y = resize_h / im_shape[0]
             im_scale_x = resize_w / im_shape[1]
-
+            pad_h = 0
+            pad_w = 0
+            self.pad_size = (pad_w, pad_h)
         # resize
-        im = self.apply_image(sample['image'], [im_scale_x, im_scale_y])
+        im = self.apply_image(sample['image'], (im_scale_x, im_scale_y), self.pad_size)
 
         sample['image'] = im
         sample['im_shape'] = np.asarray([resize_h, resize_w], dtype=np.float32)
@@ -335,7 +362,7 @@ class RandomDistort(object):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    img = cv2.imread('/home/ubuntu/Documents/pycharm/blazeface/samples/test.jpg')
+    img = cv2.imread('/home/tjm/Documents/python/pycharmProjects/blazeface/samples/test.jpg')
 
     kyw = {
         'Resize': {'target_size': (640, 640), 'keep_ratio': True}
