@@ -184,7 +184,15 @@ class MultiBoxLoss(nn.Module):
         See: https://arxiv.org/pdf/1512.02325.pdf for more details.
     """
 
-    def __init__(self, num_classes, overlap_thresh, prior_for_matching, bkg_label, neg_mining, neg_pos, neg_overlap, encode_target):
+    def __init__(self,
+                 num_classes,
+                 overlap_thresh,
+                 prior_for_matching,
+                 bkg_label,
+                 neg_mining,
+                 neg_pos,
+                 neg_overlap,
+                 encode_target):
         super(MultiBoxLoss, self).__init__()
         self.num_classes = num_classes
         self.threshold = overlap_thresh
