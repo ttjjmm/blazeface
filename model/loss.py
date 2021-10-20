@@ -140,25 +140,25 @@ import torch.nn.functional as F
 #         return loss
 
 
-def bbox2delta(src_boxes, tgt_boxes, weights):
-    src_w = src_boxes[:, 2] - src_boxes[:, 0]
-    src_h = src_boxes[:, 3] - src_boxes[:, 1]
-    src_ctr_x = src_boxes[:, 0] + 0.5 * src_w
-    src_ctr_y = src_boxes[:, 1] + 0.5 * src_h
-
-    tgt_w = tgt_boxes[:, 2] - tgt_boxes[:, 0]
-    tgt_h = tgt_boxes[:, 3] - tgt_boxes[:, 1]
-    tgt_ctr_x = tgt_boxes[:, 0] + 0.5 * tgt_w
-    tgt_ctr_y = tgt_boxes[:, 1] + 0.5 * tgt_h
-
-    wx, wy, ww, wh = weights
-    dx = wx * (tgt_ctr_x - src_ctr_x) / src_w
-    dy = wy * (tgt_ctr_y - src_ctr_y) / src_h
-    dw = ww * torch.log(tgt_w / src_w)
-    dh = wh * torch.log(tgt_h / src_h)
-
-    deltas = torch.stack((dx, dy, dw, dh), dim=1)
-    return deltas
+# def bbox2delta(src_boxes, tgt_boxes, weights):
+#     src_w = src_boxes[:, 2] - src_boxes[:, 0]
+#     src_h = src_boxes[:, 3] - src_boxes[:, 1]
+#     src_ctr_x = src_boxes[:, 0] + 0.5 * src_w
+#     src_ctr_y = src_boxes[:, 1] + 0.5 * src_h
+#
+#     tgt_w = tgt_boxes[:, 2] - tgt_boxes[:, 0]
+#     tgt_h = tgt_boxes[:, 3] - tgt_boxes[:, 1]
+#     tgt_ctr_x = tgt_boxes[:, 0] + 0.5 * tgt_w
+#     tgt_ctr_y = tgt_boxes[:, 1] + 0.5 * tgt_h
+#
+#     wx, wy, ww, wh = weights
+#     dx = wx * (tgt_ctr_x - src_ctr_x) / src_w
+#     dy = wy * (tgt_ctr_y - src_ctr_y) / src_h
+#     dw = ww * torch.log(tgt_w / src_w)
+#     dh = wh * torch.log(tgt_h / src_h)
+#
+#     deltas = torch.stack((dx, dy, dw, dh), dim=1)
+#     return deltas
 
 
 class MultiBoxLoss(nn.Module):
@@ -212,7 +212,7 @@ class MultiBoxLoss(nn.Module):
         loc_data, conf_data = predictions
         priors = priors
         num = loc_data.size(0)
-        num_priors = (priors.size(0))
+        num_priors = priors.size(0)
 
         # match priors (default boxes) and ground truth boxes
         loc_t = torch.Tensor(num, num_priors, 4)
@@ -328,12 +328,12 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     best_prior_overlap.squeeze_(1)
     best_truth_overlap.index_fill_(0, best_prior_idx_filter, 2)  # ensure best prior
 
-    # TODO refactor: index  best_prior_idx with long tensor
+    # TODO refactor: index best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
     for j in range(best_prior_idx.size(0)):     # 判别此anchor是预测哪一个boxes
         best_truth_idx[best_prior_idx[j]] = j
     matches = truths[best_truth_idx]            # Shape: [num_priors,4] 此处为每一个anchor对应的bbox取出来
-    conf = labels[best_truth_idx]               # Shape: [num_priors]      此处为每一个anchor对应的label取出来
+    conf = labels[best_truth_idx]               # Shape: [num_priors, ] 此处为每一个anchor对应的label取出来
     conf[best_truth_overlap < threshold] = 0    # label as background   overlap<0.35的全部作为负样本
     loc = encode(matches, priors, variances)
 
