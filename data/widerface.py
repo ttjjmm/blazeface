@@ -46,7 +46,8 @@ class WiderFaceDataset(Dataset):
         # self.load_annotations(self.label_path)
 
         kyw = {
-            'Resize': {'target_size': (640, 640), 'keep_ratio': True}
+            'Resize': {'target_size': (640, 640), 'keep_ratio': True},
+            'RandomFlip': {'prob': 0.5},
         }
         self.aug_pipeline = Pipeline(kyw)
 
@@ -232,7 +233,7 @@ class WiderFaceDataset(Dataset):
 
 if __name__ == '__main__':
     data_p = '/home/ubuntu/Documents/pycharm/blazeface/data/widerface'
-    data = WiderFaceDataset(data_p, mode='train', min_size=None, with_kp=False)
+    data = WiderFaceDataset(data_p, mode='train', min_size=20, with_kp=False)
     x = data[12]
     print(x)
 
