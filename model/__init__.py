@@ -4,13 +4,13 @@ import yaml
 import torch
 
 
-def load_config(cfg_path):
-    config = yaml.load(open(cfg_path, 'rb'), Loader=yaml.Loader)
-    return config
+# def load_config(cfg_path):
+#     config = yaml.load(open(cfg_path, 'rb'), Loader=yaml.Loader)
+#     return config
 
 
-def build_model(cfg_path):
-    config = load_config(cfg_path)
+def build_model(config):
+    # config = load_config(cfg_path)
     arch = config.pop('architecture')
     if arch in config:
         arch_cfg = config[arch]

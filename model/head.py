@@ -154,7 +154,7 @@ class AnchorGeneratorSSD(object):
 
 
     def __call__(self):
-        boxes = prior_box(self.min_sizes,self.steps, clip=False, image_size=(320, 320), offset=0.5)
+        boxes = prior_box(self.min_sizes,self.steps, clip=False, image_size=(640, 640), offset=0.5)
 
         # for input, min_size, max_size, aspect_ratio, step in zip(
         #         inputs, self.min_sizes, self.max_sizes, self.aspect_ratios,

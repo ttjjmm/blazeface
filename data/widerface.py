@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from icecream import ic
 
 
-from operators import Pipeline
+from data.operators import Pipeline
 
 from tqdm import tqdm
 
@@ -25,7 +25,7 @@ class WiderFaceDataset(Dataset):
 
     CLASSES = ('FG',)
 
-    def __init__(self, data_path, img_size=(640, 640), mode='train', min_size=None, with_kp=True):
+    def __init__(self, data_path, pipeline, img_size=(640, 640), mode='train', min_size=None, with_kp=True):
         super(WiderFaceDataset, self).__init__()
         assert mode in ['train', 'val'], 'dataset mode implement error!'
 
@@ -45,11 +45,11 @@ class WiderFaceDataset(Dataset):
         # print(self.label_path, self.img_path)
         # self.load_annotations(self.label_path)
 
-        kyw = {
-            'Resize': {'target_size': (640, 640), 'keep_ratio': True},
-            'RandomFlip': {'prob': 0.5},
-        }
-        self.aug_pipeline = Pipeline(kyw)
+        # kyw = {
+        #     'Resize': {'target_size': (640, 640), 'keep_ratio': True},
+        #     'RandomFlip': {'prob': 0.5},
+        # }
+        self.aug_pipeline = Pipeline(pipeline)
 
 
 
@@ -221,11 +221,10 @@ class WiderFaceDataset(Dataset):
         #     cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255))
         plt.imshow(img)
         plt.show()
-
-
         ic(annos)
 
-
+    def collate(self, batch_samples):
+        pass
 
 
 

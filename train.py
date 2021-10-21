@@ -27,8 +27,11 @@ def parse_args():
 
 
 def load_config(cfg_path):
-    config = yaml.load(open(cfg_path, 'rb'), Loader=yaml.Loader)
-    return config
+    with open(cfg_path) as f:
+        file_cfg = yaml.load(f, Loader=yaml.Loader)
+
+    # config = yaml.load(open(cfg_path, 'rb'), Loader=yaml.Loader)
+    return file_cfg
 
 
 
@@ -39,8 +42,10 @@ class Trainer(object):
         model_cfg = cfgs['model'].copy()
         data_cfg = cfgs['data'].copy()
         self.model = build_model(model_cfg).to(self.device)
-        self.train_loader = build_dataloader(data_cfg['train'])
-        self.val_loader = build_dataloader(data_cfg['val'])
+        print(data_cfg['train'])
+        # exit(11)
+        self.train_loader = build_dataloader(data_cfg['train'], mode='train')
+        # self.val_loader = build_dataloader(data_cfg['val'], mode='val')
 
 
 

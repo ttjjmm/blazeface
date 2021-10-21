@@ -53,13 +53,14 @@ model:
 data:
   train:
     dataset:
-      fold_path: ''
+      data_path: 'data/widerface'
+      img_size: [640, 640]
       min_size: 20
       with_kp: False
       pipeline:
         {
-          'Resize': {'target_size': (640, 640), 'keep_ratio': True},
-          'RandomFlip': {'prob': 0.5},
+          Resize: {target_size: [640, 640], keep_ratio: True},
+          RandomFlip: {prob: 0.5}
         }
     loader:
       num_workers: 4
@@ -68,4 +69,4 @@ data:
       pin_memory: True
   val:
     dataset:
-      fold_path: ''
+      fold_path: 'data/widerface'
