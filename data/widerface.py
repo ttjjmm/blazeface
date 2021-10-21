@@ -201,38 +201,48 @@ class WiderFaceDataset(Dataset):
 
         annos = self.get_ann_info(idx)
 
-        bbox = annos['bboxes']
+        # gt_bbox = np.concatenate([annos['bboxes'], np.expand_dims(annos['labels'], axis=-1)], axis=1)
+
         data = {
-            'image': img, 'gt_bbox': bbox
+            'image': img, 'gt_bbox': annos['bboxes']
         }
         data = self.aug_pipeline(data)
-
-        print(data)
+        gt_bbox = np.concatenate([data['gt_bbox'], np.expand_dims(annos['labels'], axis=-1)], axis=1)
+        return {'image': torch.from_numpy(img), 'gt_bbox': torch.from_numpy(gt_bbox)}
         # exit(11)
 
-        img = data['image'].astype(np.uint8)
+        # img = data['image'].astype(np.uint8)
+        #
+        # bbox = data['gt_bbox'].astype(np.int32)
+        # # keypoint = annos['keypoints'].astype(np.int32)
+        # for i in bbox:
+        #     cv2.rectangle(img, (i[0], i[1]), (i[2], i[3]), (255, 0, 0), cv2.LINE_4)
+        #
+        # # for i in keypoint[0]:
+        # #     cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255))
+        # plt.imshow(img)
+        # plt.show()
+        # ic(annos)
 
-        bbox = data['gt_bbox'].astype(np.int32)
-        # keypoint = annos['keypoints'].astype(np.int32)
-        for i in bbox:
-            cv2.rectangle(img, (i[0], i[1]), (i[2], i[3]), (255, 0, 0), cv2.LINE_4)
-
-        # for i in keypoint[0]:
-        #     cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255))
-        plt.imshow(img)
-        plt.show()
-        ic(annos)
-
-    def collate(self, batch_samples):
-        pass
-
+    @staticmethod
+    def collate(batch_samples):
+        img_ls = list()
+        bbox_ls = list()
+        for item in batch_samples:
+            img_ls.append(item['image'])
+            bbox_ls.append(item['gt_bbox'])
+        return torch.stack(img_ls, dim=0), bbox_ls
 
 
 
 
 if __name__ == '__main__':
     data_p = '/home/tjm/Documents/python/pycharmProjects/blazeface/data/widerface'
-    data = WiderFaceDataset(data_p, mode='train', min_size=20, with_kp=False)
+    kyw = {
+            'Resize': {'target_size': (640, 640), 'keep_ratio': True},
+            'RandomFlip': {'prob': 0.5},
+        }
+    data = WiderFaceDataset(data_p, mode='train', min_size=20, with_kp=False, pipeline=kyw)
     x = data[12]
     print(x)
 

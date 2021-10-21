@@ -28,18 +28,14 @@ class BlazeHead(nn.Module):
                  num_classes=1,
                  in_channels=(96, 96),
                  kernel_size=3,
-                 padding=1,
-                 loss='SSDLoss', **kwargs):
+                 padding=1):
         super(BlazeHead, self).__init__()
         # add background class
         self.num_classes = num_classes + 1
         self.in_channels = in_channels
         self.anchor_generator = AnchorGeneratorSSD(**cfg_anchor)
+        self.loss = SSDLoss(**cfg_loss)
 
-        if loss == 'SSDLoss':
-            self.loss = SSDLoss(**cfg_loss)
-        else:
-            raise NotImplementedError('loss function error!')
         # if isinstance(anchor_generator, dict):
         #     self.anchor_generator = AnchorGeneratorSSD(**anchor_generator)
 

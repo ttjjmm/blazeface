@@ -6,7 +6,7 @@ except Exception:
 from numbers import Number, Integral
 import cv2
 import numpy as np
-from icecream import ic
+# from icecream import ic
 
 import matplotlib.pyplot as plt
 
@@ -28,7 +28,6 @@ class Pipeline(object):
     def __init__(self, operators: dict=None):
         assert isinstance(operators, dict), 'Wrong Data Augmentation Pipeline!'
         self.ops = [eval(k)(**v) for k, v in operators.items()]
-
 
     def __call__(self, data):
         """
@@ -76,8 +75,6 @@ class Resize(object):
         # plt.show()
         if self.keep_size:
             h, w = image.shape[:2]
-            ic(image.shape)
-            ic(pad_size)
             canvas = np.ones((self.target_size[1], self.target_size[0], 3), dtype=np.float32)
             canvas *= np.array(self.pad_value, dtype=np.float32)
             canvas[pad_size[1]: pad_size[1] + h, pad_size[0]: pad_size[0] + w, :] = image
