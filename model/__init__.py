@@ -18,6 +18,8 @@ def build_model(config):
         neck = arch_cfg['neck'] if 'neck' in arch_cfg else None
         head = arch_cfg['head']
         postprocess = arch_cfg['post_process']
+        loss = arch_cfg['loss']
+        anchor = arch_cfg['anchor']
     else:
         raise AttributeError("object has no attribute '{}'".format(arch))
 
@@ -25,11 +27,8 @@ def build_model(config):
     cfg_neck = config[neck] if neck else None
     cfg_head = config[head]
     cfg_postprocess = config[postprocess]
-    cfg_head['cfg_anchor'] = {'steps': [8, 16],
-                              'aspect_ratios': [[1.], [1.]],
-                              'min_sizes': [[16, 24], [32, 48, 64, 80, 96, 128]],
-                              'offset': 0.5,
-                              'flip':False}
+    cfg_head['cfg_loss'] = config[loss]
+    cfg_head['cfg_anchor'] = config[anchor]
 
     model = BlazeFace(cfg_backbone, cfg_neck, cfg_head, cfg_postprocess)
     return model

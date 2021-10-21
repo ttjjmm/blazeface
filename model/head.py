@@ -2,10 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from math import ceil
-import six
-from itertools import product as product
-from utils.loss import SSDLoss
+
+from model.loss import SSDLoss, AnchorGeneratorSSD
 
 # from icecream import ic
 
@@ -25,7 +23,8 @@ class BlazeHead(nn.Module):
     """
 
     def __init__(self,
-                 cfg_anchor=None,
+                 cfg_anchor,
+                 cfg_loss,
                  num_classes=1,
                  in_channels=(96, 96),
                  kernel_size=3,
@@ -38,8 +37,9 @@ class BlazeHead(nn.Module):
         self.anchor_generator = AnchorGeneratorSSD(**cfg_anchor)
 
         if loss == 'SSDLoss':
-            self.loss = SSDLoss()
-
+            self.loss = SSDLoss(**cfg_loss)
+        else:
+            raise NotImplementedError('loss function error!')
         # if isinstance(anchor_generator, dict):
         #     self.anchor_generator = AnchorGeneratorSSD(**anchor_generator)
 
@@ -91,6 +91,8 @@ class BlazeHead(nn.Module):
             prior_boxes = self.anchor_generator()
             device = box_preds.device
             prior_boxes = prior_boxes.to(device)
+        else:
+            prior_boxes = None
 
         if self.training:
             return self.get_loss(box_preds, cls_scores, gt_bbox, gt_class, prior_boxes)
@@ -98,90 +100,26 @@ class BlazeHead(nn.Module):
             return box_preds, F.softmax(cls_scores, dim=-1)
         else:
             return (box_preds, F.softmax(cls_scores, dim=-1)), prior_boxes
-    #
-    # def get_loss(self, boxes, scores, gt_bbox, gt_class, prior_boxes):
-    #     return self.loss(boxes, scores, gt_bbox, gt_class, prior_boxes)
+
+    def get_loss(self, boxes, scores, gt_bbox, gt_class, prior_boxes):
+        return self.loss(boxes, scores, gt_bbox, gt_class, prior_boxes)
 
 
 
-def prior_box(min_sizes, steps, clip, image_size, offset):
-    feature_maps = [[ceil(image_size[0] / step), ceil(image_size[1] / step)] for step in steps]
-    anchors = []
-    for k, f in enumerate(feature_maps):
-        min_size = min_sizes[k]
-        for i, j in product(range(f[0]), range(f[1])):
-            # print(i, j)
-            for min_size_n in min_size:
-                s_kx = min_size_n / image_size[1]
-                s_ky = min_size_n / image_size[0]
-                dense_cx = [x * steps[k] / image_size[1] for x in [j + offset]]
-                dense_cy = [y * steps[k] / image_size[0] for y in [i + offset]]
-                for cy, cx in product(dense_cy, dense_cx):
-                    # ic(cy, cx)
-                    anchors += [cx, cy, s_kx, s_ky]
-    # back to torch land
-    output = torch.Tensor(anchors).view(-1, 4)
-    if clip:
-        output.clamp_(max=1, min=0)
-    return output
 
 
-class AnchorGeneratorSSD(object):
-    def __init__(self,
-                 steps=[8, 16],
-                 aspect_ratios=[[1.], [1.]],
-                 min_sizes=[[16, 24], [32, 48, 64, 80, 96, 128]],
-                 offset=0.5,
-                 flip=True,
-                 clip=False):
-        self.steps = steps
-        self.aspect_ratios = aspect_ratios
-        self.min_sizes = min_sizes
-        self.offset = offset
-        self.flip = flip
-        self.clip = clip
-        # print(self.min_sizes)
 
 
-        self.num_priors = []
-        for item in self.min_sizes:
-            self.num_priors.append(len(item))
-        # for aspect_ratio, min_size, max_size in zip(aspect_ratios, self.min_sizes, self.max_sizes):
-        #     if isinstance(min_size, (list, tuple)):
-        #         self.num_priors.append(len(_to_list(min_size)) + len(_to_list(max_size)))
-        #     else:
-        #         self.num_priors.append((len(aspect_ratio) * 2 + 1) * len(_to_list(min_size)) + len(_to_list(max_size)))
 
 
-    def __call__(self):
-        boxes = prior_box(self.min_sizes,self.steps, clip=False, image_size=(640, 640), offset=0.5)
-
-        # for input, min_size, max_size, aspect_ratio, step in zip(
-        #         inputs, self.min_sizes, self.max_sizes, self.aspect_ratios,
-        #         self.steps):
-        #     box, _ = ops.prior_box(
-        #         input=input,
-        #         image=image,
-        #         min_sizes=_to_list(min_size),
-        #         max_sizes=_to_list(max_size),
-        #         aspect_ratios=aspect_ratio,
-        #         flip=self.flip,
-        #         clip=self.clip,
-        #         steps=[step, step],
-        #         offset=self.offset,
-        #         min_max_aspect_ratios_order=self.min_max_aspect_ratios_order)
-        #     boxes.append(paddle.reshape(box, [-1, 4]))
-        return boxes
-
-
-if __name__ == '__main__':
-    anchor = AnchorGeneratorSSD(
-        steps= [8, 16],
-        aspect_ratios= [[1.], [1.]],
-        min_sizes= [[16, 24], [32, 48, 64, 80, 96, 128]], # 1:8 2:16
-        offset= 0.5,
-        flip=False)
-    print(anchor().shape)
+# if __name__ == '__main__':
+    # anchor = AnchorGeneratorSSD(
+    #     steps= [8, 16],
+    #     aspect_ratios= [[1.], [1.]],
+    #     min_sizes= [[16, 24], [32, 48, 64, 80, 96, 128]], # 1:8 2:16
+    #     offset= 0.5,
+    #     flip=False)
+    # print(anchor().shape)
 
     # cfg = {'steps': [8, 16],
     #     'aspect_ratios': [[1.], [1.]],

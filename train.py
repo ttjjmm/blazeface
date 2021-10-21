@@ -42,8 +42,7 @@ class Trainer(object):
         model_cfg = cfgs['model'].copy()
         data_cfg = cfgs['data'].copy()
         self.model = build_model(model_cfg).to(self.device)
-        print(data_cfg['train'])
-        # exit(11)
+
         self.train_loader = build_dataloader(data_cfg['train'], mode='train')
         # self.val_loader = build_dataloader(data_cfg['val'], mode='val')
 
