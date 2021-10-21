@@ -232,7 +232,7 @@ class WiderFaceDataset(Dataset):
 
 
 if __name__ == '__main__':
-    data_p = '/home/ubuntu/Documents/pycharm/blazeface/data/widerface'
+    data_p = '/home/tjm/Documents/python/pycharmProjects/blazeface/data/widerface'
     data = WiderFaceDataset(data_p, mode='train', min_size=20, with_kp=False)
     x = data[12]
     print(x)
