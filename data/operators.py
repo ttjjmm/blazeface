@@ -38,6 +38,15 @@ class Pipeline(object):
         return data
 
 
+class Normalize(object):
+    def __init__(self, mean, std):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        pass
+
+
+
 class Resize(object):
     def __init__(self, target_size, keep_ratio=True, keep_size=True, pad_value=(128.5, 128.5, 128.5), interp=cv2.INTER_LINEAR):
         """
