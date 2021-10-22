@@ -15,7 +15,7 @@ def build_dataloader(config, mode='train'):
 
     dataloader = DataLoader(dataset, **cfg_loader, collate_fn=dataset.collate)
 
-
+    return dataloader
 
 
 

@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from model import build_model
 from data import build_dataloader
+from utils.tools import create_workspace
 
 
 def parse_args():
@@ -15,15 +16,26 @@ def parse_args():
                         help='model configuration file path')
     parser.add_argument('--device', type=str, default='cuda:0',
                         help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--img_path', type=str, default='./samples/test.jpg',
-                        help='detect sample image path')
-    parser.add_argument('--size', default=(640, 640), type=tuple,
-                        help='detect input image size')
-    # parser.add_argument('--seed', type=int, default=None,
-    #                     help='random seed')
+    parser.add_argument('--resume', nargs='?', const=True, default=False,
+                        help='resume most recent training')
+    parser.add_argument('--seed', type=int, default=718,
+                        help='random seed')
     args = parser.parse_args()
     return args
 
+
+def init_seeds(seed=0):
+    """
+    manually set a random seed for numpy, torch and cuda
+    :param seed: random seed
+    """
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    if seed == 0:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 
 def load_config(cfg_path):
@@ -34,20 +46,36 @@ def load_config(cfg_path):
     return file_cfg
 
 
+# def
+
 
 class Trainer(object):
     def __init__(self, args):
-        self.device = args.device
+
         cfgs = load_config(args.cfg)
         model_cfg = cfgs['model'].copy()
         data_cfg = cfgs['data'].copy()
+        self.resume = args.resume
+        self.device = args.device
         self.model = build_model(model_cfg).to(self.device)
 
         self.train_loader = build_dataloader(data_cfg['train'], mode='train')
         # self.val_loader = build_dataloader(data_cfg['val'], mode='val')
 
+        # workspace steup
 
 
+        # matric
+
+        # logger
+    def initial_setup(self):
+        pass
+
+
+    def train(self):
+        for idx, batch in enumerate(tqdm(self.train_loader)):
+            print(batch[0].shape)
+            # pass
 
     def train_epoch(self):
         pass
@@ -62,13 +90,17 @@ class Trainer(object):
 
 
 
+def main():
+    args = parse_args()
+
+    # t = Trainer(arg)
+    # t.train()
+    pass
+
 
 
 if __name__ == '__main__':
-    arg = parse_args()
-
-    t = Trainer(arg)
-
+    main()
 
 
 

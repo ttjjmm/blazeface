@@ -25,7 +25,7 @@ class WiderFaceDataset(Dataset):
 
     CLASSES = ('FG',)
 
-    def __init__(self, data_path, pipeline, img_size=(640, 640), mode='train', min_size=None, with_kp=True):
+    def __init__(self, data_path, pipeline, img_size=(640, 640), mode='train', min_size=None, with_kp=True, cache_label=False):
         super(WiderFaceDataset, self).__init__()
         assert mode in ['train', 'val'], 'dataset mode implement error!'
 
@@ -38,9 +38,11 @@ class WiderFaceDataset(Dataset):
         self.NK = 5
         self.cat2label = {cat: i for i, cat in enumerate(self.CLASSES)}
         # self.test_mode = mode == 'test'
-
+        self.cache_path = os.path.join(data_path, 'label.cache')
 
         self.data_infos = self.load_annotations(self.label_path)
+
+
         # print(self.anno_info)
         # print(self.label_path, self.img_path)
         # self.load_annotations(self.label_path)
@@ -49,9 +51,18 @@ class WiderFaceDataset(Dataset):
         #     'Resize': {'target_size': (640, 640), 'keep_ratio': True},
         #     'RandomFlip': {'prob': 0.5},
         # }
+        print(pipeline)
         self.aug_pipeline = Pipeline(pipeline)
 
 
+    def _cache_labels(self):
+        # check path
+        if os.path.exists(self.label_path):
+            # load cache directly
+            pass
+        else:
+            # cache labels
+            pass
 
     def _parse_ann_line(self, line):
         """
@@ -208,7 +219,7 @@ class WiderFaceDataset(Dataset):
         }
         data = self.aug_pipeline(data)
         gt_bbox = np.concatenate([data['gt_bbox'], np.expand_dims(annos['labels'], axis=-1)], axis=1)
-        return {'image': torch.from_numpy(img), 'gt_bbox': torch.from_numpy(gt_bbox)}
+        return {'image': data['image'], 'gt_bbox': torch.from_numpy(gt_bbox)}
         # exit(11)
 
         # img = data['image'].astype(np.uint8)
@@ -237,7 +248,7 @@ class WiderFaceDataset(Dataset):
 
 
 if __name__ == '__main__':
-    data_p = '/home/tjm/Documents/python/pycharmProjects/blazeface/data/widerface'
+    data_p = '/home/ubuntu/Documents/pycharm/blazeface/data/widerface'
     kyw = {
             'Resize': {'target_size': (640, 640), 'keep_ratio': True},
             'RandomFlip': {'prob': 0.5},

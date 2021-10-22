@@ -1,4 +1,6 @@
 
+workspace: run
+
 
 model:
   architecture: BlazeFace # blazeface_1000e
@@ -25,7 +27,6 @@ model:
     cfg_anchor:
     kernel_size: 3
     padding: 1
-    loss: SSDLoss
 
   SSDLoss:
     overlap_thresh: 0.35
@@ -58,15 +59,39 @@ data:
       min_size: 20
       with_kp: False
       pipeline:
-        {
+        { # add color
+          RandomDistort: {brightness: [0.5, 1.125, 0.875], random_apply: False},
           Resize: {target_size: [640, 640], keep_ratio: True},
-          RandomFlip: {prob: 0.5}
+          RandomFlip: {prob: 0.5},
+          Normalize: {mean: [123, 117, 104], std: [127.502231, 127.502231, 127.502231], is_scale: false},
+          Permute2Tensor: {}
         }
     loader:
-      num_workers: 4
+      num_workers: 8
       batch_size: 32
       shuffle: True
       pin_memory: True
+      drop_last: True
   val:
     dataset:
       fold_path: 'data/widerface'
+      img_size: [640, 640]
+      with_kp: False
+      pipeline:
+        { # add color
+          Resize: {target_size: [640, 640], keep_ratio: True},
+          Normalize: {mean: [123, 117, 104], std: [127.502231, 127.502231, 127.502231], is_scale: false},
+          Permute2Tensor: {}
+        }
+    loader:
+      num_workers: 8
+      batch_size: 32
+      shuffle: False
+      pin_memory: True
+      drop_last: False
+  test:
+    dataset:
+
+    loader:
+
+

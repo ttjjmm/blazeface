@@ -3,16 +3,17 @@ try:
 except Exception:
     from collections import Sequence
 
+import torch
 from numbers import Number, Integral
 import cv2
 import numpy as np
-# from icecream import ic
+from icecream import ic
 
 import matplotlib.pyplot as plt
 
 
 
-__all__ = ['Pipeline', 'Resize', 'RandomDistort']
+__all__ = ['Pipeline']
 
 
 class BboxError(ValueError):
@@ -39,12 +40,38 @@ class Pipeline(object):
 
 
 class Normalize(object):
-    def __init__(self, mean, std):
+    def __init__(self, mean, std, is_scale=True):
+        self.mean = mean
+        self.std =std
+        self.is_scale = is_scale
+
+    def __call__(self, sample):
+        im = sample['image']
+        im = im.astype(np.float32, copy=False)
+        mean = np.array(self.mean)[np.newaxis, np.newaxis, :]
+        std = np.array(self.std)[np.newaxis, np.newaxis, :]
+
+        if self.is_scale:
+            im = im / 255.0
+
+        im -= mean
+        im /= std
+
+        sample['image'] = im
+        return sample
+
+
+class Permute2Tensor(object):
+    def __init__(self):
         pass
 
-    def __call__(self, *args, **kwargs):
-        pass
-
+    def __call__(self, sample):
+        im = sample['image']
+        im = im.transpose((2, 0, 1))
+        im = np.ascontiguousarray(im)
+        # print(im.shape)
+        sample['image'] = torch.from_numpy(im.copy())
+        return sample
 
 
 class Resize(object):
@@ -84,9 +111,14 @@ class Resize(object):
         # plt.show()
         if self.keep_size:
             h, w = image.shape[:2]
+
             canvas = np.ones((self.target_size[1], self.target_size[0], 3), dtype=np.float32)
             canvas *= np.array(self.pad_value, dtype=np.float32)
-            canvas[pad_size[1]: pad_size[1] + h, pad_size[0]: pad_size[0] + w, :] = image
+            try:
+                canvas[pad_size[1]: pad_size[1] + h, pad_size[0]: pad_size[0] + w, :] = image
+            except ValueError:
+                ic(h, w, self.pad_size)
+                raise ValueError
             return canvas
         else:
             return image
@@ -133,8 +165,8 @@ class Resize(object):
             im_scale = min(target_size_min / im_size_min,
                            target_size_max / im_size_max)
 
-            resize_h = im_scale * float(im_shape[0])
-            resize_w = im_scale * float(im_shape[1])
+            resize_h = int(im_scale * float(im_shape[0]))
+            resize_w = int(im_scale * float(im_shape[1]))
 
             pad_h = int((self.target_size[1] - resize_h) // 2)
             pad_w = int((self.target_size[0] - resize_w) // 2)

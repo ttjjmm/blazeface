@@ -1,111 +1,14 @@
 import numpy as np
+from pathlib import Path
+import glob
+import os
+import re
 import torch
 import torch.nn.functional as F
 from utils.flops_counter import get_model_complexity_info, flops_to_string, params_to_string
 # from icecream import ic
 
-# class BBoxPostProcess(object):
-#     __shared__ = ['num_classes']
-#     __inject__ = ['decode', 'nms']
-#
-#     def __init__(self, num_classes=80, decode=None, nms=None):
-#         super(BBoxPostProcess, self).__init__()
-#         self.num_classes = num_classes
-#         self.decode = decode
-#         self.nms = nms
-#
-#     def __call__(self, head_out, rois, im_shape, scale_factor):
-#         """
-#         Decode the bbox and do NMS if needed.
-#
-#         Args:
-#             head_out (tuple): bbox_pred and cls_prob of bbox_head output.
-#             rois (tuple): roi and rois_num of rpn_head output.
-#             im_shape (Tensor): The shape of the input image.
-#             scale_factor (Tensor): The scale factor of the input image.
-#         Returns:
-#             bbox_pred (Tensor): The output prediction with shape [N, 6], including
-#                 labels, scores and bboxes. The size of bboxes are corresponding
-#                 to the input image, the bboxes may be used in other branch.
-#             bbox_num (Tensor): The number of prediction boxes of each batch with
-#                 shape [1], and is N.
-#         """
-#         if self.nms is not None:
-#             bboxes, score = self.decode(head_out, rois, im_shape, scale_factor)
-#             bbox_pred, bbox_num, _ = self.nms(bboxes, score, self.num_classes)
-#         else:
-#             bbox_pred, bbox_num = self.decode(head_out, rois, im_shape,
-#                                               scale_factor)
-#         return bbox_pred, bbox_num
-#
-#     def get_pred(self, bboxes, bbox_num, im_shape, scale_factor):
-#         """
-#         Rescale, clip and filter the bbox from the output of NMS to
-#         get final prediction.
-#
-#         Notes:
-#         Currently only support bs = 1.
-#
-#         Args:
-#             bboxes (Tensor): The output bboxes with shape [N, 6] after decode
-#                 and NMS, including labels, scores and bboxes.
-#             bbox_num (Tensor): The number of prediction boxes of each batch with
-#                 shape [1], and is N.
-#             im_shape (Tensor): The shape of the input image.
-#             scale_factor (Tensor): The scale factor of the input image.
-#         Returns:
-#             pred_result (Tensor): The final prediction results with shape [N, 6]
-#                 including labels, scores and bboxes.
-#         """
-#
-#         if bboxes.shape[0] == 0:
-#             bboxes = torch.tensor(
-#                 np.array(
-#                     [[-1, 0.0, 0.0, 0.0, 0.0, 0.0]], dtype='float32'))
-#             bbox_num = torch.tensor(np.array([1], dtype='int32'))
-#
-#         origin_shape = torch.floor(im_shape / scale_factor + 0.5)
-#
-#         origin_shape_list = []
-#         scale_factor_list = []
-#         # scale_factor: scale_y, scale_x
-#         for i in range(bbox_num.shape[0]):
-#             expand_shape = paddle.expand(origin_shape[i:i + 1, :],
-#                                          [bbox_num[i], 2])
-#             scale_y, scale_x = scale_factor[i][0], scale_factor[i][1]
-#             scale = paddle.concat([scale_x, scale_y, scale_x, scale_y])
-#             expand_scale = paddle.expand(scale, [bbox_num[i], 4])
-#             origin_shape_list.append(expand_shape)
-#             scale_factor_list.append(expand_scale)
-#
-#         self.origin_shape_list = paddle.concat(origin_shape_list)
-#         scale_factor_list = paddle.concat(scale_factor_list)
-#
-#         # bboxes: [N, 6], label, score, bbox
-#         pred_label = bboxes[:, 0:1]
-#         pred_score = bboxes[:, 1:2]
-#         pred_bbox = bboxes[:, 2:]
-#         # rescale bbox to original image
-#         scaled_bbox = pred_bbox / scale_factor_list
-#         origin_h = self.origin_shape_list[:, 0]
-#         origin_w = self.origin_shape_list[:, 1]
-#         zeros = paddle.zeros_like(origin_h)
-#         # clip bbox to [0, original_size]
-#         x1 = paddle.maximum(paddle.minimum(scaled_bbox[:, 0], origin_w), zeros)
-#         y1 = paddle.maximum(paddle.minimum(scaled_bbox[:, 1], origin_h), zeros)
-#         x2 = paddle.maximum(paddle.minimum(scaled_bbox[:, 2], origin_w), zeros)
-#         y2 = paddle.maximum(paddle.minimum(scaled_bbox[:, 3], origin_h), zeros)
-#         pred_bbox = paddle.stack([x1, y1, x2, y2], axis=-1)
-#         # filter empty bbox
-#         keep_mask = nonempty_bbox(pred_bbox, return_mask=True)
-#         keep_mask = paddle.unsqueeze(keep_mask, [1])
-#         pred_label = paddle.where(keep_mask, pred_label,
-#                                   paddle.ones_like(pred_label) * -1)
-#         pred_result = paddle.concat([pred_label, pred_score, pred_bbox], axis=1)
-#         return pred_result
-#
-#     def get_origin_shape(self, ):
-#         return self.origin_shape_list
+
 
 
 class SSDBox(object):
@@ -164,3 +67,55 @@ def flops_info(model, input_shape=(3, 320, 320)):
     split_line = '=' * 30
     print(f'{split_line}\nInput shape: {input_shape}\n'
           f'Flops: {flops}\nParams: {params}\n{split_line}')
+
+
+
+def get_latest_run(search_dir='.'):
+
+    # Return path to most recent 'last.pt' in /runs (i.e. to --resume from)
+    last_list = glob.glob(f'{search_dir}/**/*last.pt', recursive=True)
+    return max(last_list, key=os.path.getctime) if last_list else ''
+
+
+def increment_path(path, exist_ok=True, sep=''):
+    # Increment path, i.e. runs/exp --> runs/exp{sep}0, runs/exp{sep}1 etc.
+    path = Path(path)  # os-agnostic
+    if (path.exists() and exist_ok) or (not path.exists()):
+        return str(path)
+    else:
+        dirs = glob.glob(f"{path}{sep}*")  # similar paths
+        matches = [re.search(rf"%s{sep}(\d+)" % path.stem, d) for d in dirs]
+        i = [int(m.groups()[0]) for m in matches if m]  # indices
+        n = max(i) + 1 if i else 2  # increment number
+        return f"{path}{sep}{n}"  # update path
+
+
+def check_file(file):
+    # Search for file if not found
+    if os.path.isfile(file):
+        return file
+    # elif file == '' or file is None
+    else: # file is fold
+        files = glob.glob('./**/' + file, recursive=True)  # find file
+        assert len(files), 'File Not Found in Path: "%s"' % file  # assert file was found
+        assert len(files) == 1, "Multiple files match '%s', specify exact path: %s" % (file, files)  # assert unique
+        return files[0]  # return file
+
+
+def create_workspace(cfg, resume=False):
+    if resume:
+        if 'weights_path' not in cfg:
+            weights_dir = get_latest_run(cfg.save_path)
+            assert weights_dir != '', \
+                'last weights not exist in current resume path: {}'.format(os.path.abspath(cfg.save_path))
+            log_dir = Path(weights_dir).parent.parent.as_posix()
+        else:
+            assert cfg.weights_path != '' and cfg.weights_path is not None, 'The Key "weights_path" is illegal in .yaml File'
+            weights_dir = check_file(cfg.weights_path)
+            log_dir = increment_path(Path(cfg.save_path) / '{}_exp'.format(cfg.proj_name), exist_ok=False)
+    else:
+        # mkdir(rank, work_fold)
+        log_dir = increment_path(Path(cfg.save_path) / '{}_exp'.format(cfg.proj_name), exist_ok=False)
+        weights_dir = (Path(log_dir) / 'weights/last.pt').as_posix()
+        (Path(log_dir) / 'weights').mkdir(parents=True)
+    return log_dir, weights_dir
