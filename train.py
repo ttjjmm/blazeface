@@ -7,8 +7,7 @@ from tqdm import tqdm
 
 from model import build_model
 from data import build_dataloader
-from utils.tools import create_workspace
-
+from utils import create_workspace, Logger
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -57,6 +56,9 @@ class Trainer(object):
         data_cfg = cfgs['data'].copy()
         self.resume = args.resume
         self.device = args.device
+        self.logger = None
+        self.log_dir = None
+        self.weights_dir = None
         self.model = build_model(model_cfg).to(self.device)
 
         self.train_loader = build_dataloader(data_cfg['train'], mode='train')
@@ -68,8 +70,11 @@ class Trainer(object):
         # matric
 
         # logger
-    def initial_setup(self):
-        pass
+    def initial_setup(self, cfg):
+        self.log_dir, self.weights_dir = create_workspace(cfg, self.resume)
+        self.logger = Logger(self.log_dir, use_tensorboard=True)
+
+
 
 
     def train(self):
