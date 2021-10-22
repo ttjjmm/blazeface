@@ -4,8 +4,6 @@ import glob
 import os
 import yaml
 import re
-import torch
-import torch.nn.functional as F
 from utils.flops_counter import get_model_complexity_info, flops_to_string, params_to_string
 # from icecream import ic
 
@@ -14,55 +12,6 @@ def load_config(cfg_path):
     with open(cfg_path) as f:
         file_cfg = yaml.load(f, Loader=yaml.Loader)
     return file_cfg
-
-
-class SSDBox(object):
-    def __init__(self, is_normalized=True):
-        self.is_normalized = is_normalized
-        self.norm_delta = float(not self.is_normalized)
-
-    def __call__(self,
-                 preds,
-                 prior_boxes,
-                 im_shape,
-                 scale_factor,
-                 var_weight=None):
-        boxes, scores = preds
-        outputs = []
-        # ic(prior_boxes.shape)
-        # ic(scores.shape)
-        #
-        # ic(boxes.shape)
-        prior_box = prior_boxes
-        for box, score in zip(boxes, scores):
-            # print(prior_box.shape)
-            pb_w = prior_box[:, 2] - prior_box[:, 0] + self.norm_delta
-            pb_h = prior_box[:, 3] - prior_box[:, 1] + self.norm_delta
-            pb_x = prior_box[:, 0] + pb_w * 0.5
-            pb_y = prior_box[:, 1] + pb_h * 0.5
-            out_x = pb_x + box[:, :, 0] * pb_w * 0.1
-            out_y = pb_y + box[:, :, 1] * pb_h * 0.1
-            out_w = torch.exp(box[:, :, 2] * 0.2) * pb_w
-            out_h = torch.exp(box[:, :, 3] * 0.2) * pb_h
-
-            if self.is_normalized:
-                h = torch.unsqueeze(
-                    im_shape[:, 0] / scale_factor[:, 0], dim=-1)
-                w = torch.unsqueeze(
-                    im_shape[:, 1] / scale_factor[:, 1], dim=-1)
-                output = torch.stack([(out_x - out_w / 2.) * w,
-                                      (out_y - out_h / 2.) * h,
-                                      (out_x + out_w / 2.) * w,
-                                      (out_y + out_h / 2.) * h], dim=-1)
-            else:
-                output = torch.stack([out_x - out_w / 2., out_y - out_h / 2., out_x + out_w / 2. - 1., out_y + out_h / 2. - 1.], dim=-1)
-            outputs.append(output)
-        boxes = torch.cat(outputs, dim=1)
-
-        scores = F.softmax(torch.cat(scores, dim=-1))
-        scores = torch.transpose(scores, 1, 2)
-
-        return boxes, scores
 
 
 def flops_info(model, input_shape=(3, 320, 320)):
@@ -74,9 +23,7 @@ def flops_info(model, input_shape=(3, 320, 320)):
           f'Flops: {flops}\nParams: {params}\n{split_line}')
 
 
-
 def get_latest_run(search_dir='.'):
-
     # Return path to most recent 'last.pt' in /runs (i.e. to --resume from)
     last_list = glob.glob(f'{search_dir}/**/*last.pt', recursive=True)
     return max(last_list, key=os.path.getctime) if last_list else ''

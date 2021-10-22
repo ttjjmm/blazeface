@@ -65,7 +65,6 @@ class Trainer(object):
 
 
 
-
     def train(self):
         for idx, batch in enumerate(tqdm(self.train_loader)):
             print(batch[0].shape)

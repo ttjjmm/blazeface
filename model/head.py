@@ -59,9 +59,6 @@ class BlazeHead(nn.Module):
                 padding=(padding, padding))
             self.scores.append(score_conv)
 
-    # @classmethod
-    # def from_config(cls, cfg, input_shape):
-    #     return {'in_channels': [i.channels for i in input_shape], }
 
     def forward(self, feats, gt_bbox=None, gt_class=None):
         box_preds = []
@@ -89,20 +86,19 @@ class BlazeHead(nn.Module):
             prior_boxes = prior_boxes.to(device)
         else:
             prior_boxes = None
-
+        # for train
         if self.training:
-            return self.get_loss(box_preds, cls_scores, gt_bbox, gt_class, prior_boxes)
+            return self.get_loss((box_preds, cls_scores), gt_bbox, gt_class, prior_boxes)
+        # for onnx export
         elif torch.onnx.is_in_onnx_export():
             return box_preds, F.softmax(cls_scores, dim=-1)
+        # for inference
         else:
             return (box_preds, F.softmax(cls_scores, dim=-1)), prior_boxes
 
-    def get_loss(self, boxes, scores, gt_bbox, gt_class, prior_boxes):
-        return self.loss(boxes, scores, gt_bbox, gt_class, prior_boxes)
 
-
-
-
+    def get_loss(self, preds, gt_bbox, gt_class, prior_boxes):
+        return self.loss(preds, gt_bbox, gt_class, prior_boxes)
 
 
 

@@ -4,7 +4,7 @@ import torch.nn as nn
 from model.blazenet import BlazeNet
 from model.neck import BlazeNeck
 from model.head import BlazeHead
-from utils.tools import SSDBox
+from model.post_process import SSDBox
 from utils.nms import multiclass_nms
 
 # from icecream import ic
@@ -15,7 +15,7 @@ class BlazeFace(nn.Module):
     BlazeFace: Sub-millisecond Neural Face Detection on Mobile GPUs,
                see https://arxiv.org/abs/1907.05047
     """
-    def __init__(self, cfg_backbone, cfg_neck, cfg_head, cfg_post_process):
+    def __init__(self, cfg_backbone, cfg_neck, cfg_head, cfg_post):
         super(BlazeFace, self).__init__()
         self.backbone = BlazeNet(**cfg_backbone)
         self.is_neck = cfg_neck is not None
@@ -23,7 +23,7 @@ class BlazeFace(nn.Module):
             self.neck = BlazeNeck(**cfg_neck)
 
         self.blaze_head = BlazeHead(**cfg_head)
-        self.post_process = SSDBox()
+        self.post_process = SSDBox(**cfg_post)
 
         # self.load_weights('./weights/blazeface_1000e.pt')
         self.load_weights('./weights/blazeface_fpn_ssh_1000e.pt')
@@ -53,12 +53,8 @@ class BlazeFace(nn.Module):
 
     def inference(self, inputs):
         preds, anchors = self(inputs)
-        # ic(anchors.shape)
         pred_boxes = decode(preds[0].squeeze(0), anchors, [0.1, 0.2])
-        # ic(pred_boxes.shape)
         pred_scores = preds[1].squeeze(0)
-        # ic(pred_scores.shape)
-
         det_bboxes, det_labels = multiclass_nms(
             pred_boxes,
             pred_scores,

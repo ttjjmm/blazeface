@@ -10,22 +10,26 @@ from icecream import ic
 
 class AnchorGeneratorSSD(object):
     def __init__(self,
-                 steps=[8, 16],
-                 aspect_ratios=[[1.], [1.]],
-                 min_sizes=[[16, 24], [32, 48, 64, 80, 96, 128]],
+                 steps=None,
+                 aspect_ratios=None,
+                 min_sizes=None,
                  offset=0.5,
                  flip=True,
                  clip=False):
+        if min_sizes is None:
+            min_sizes = [[16, 24], [32, 48, 64, 80, 96, 128]]
+        if aspect_ratios is None:
+            aspect_ratios = [[1.], [1.]]
+        if steps is None:
+            steps = [8, 16]
         self.steps = steps
         self.aspect_ratios = aspect_ratios
         self.min_sizes = min_sizes
         self.offset = offset
         self.flip = flip
         self.clip = clip
-        # print(self.min_sizes)
 
-
-        self.num_priors = []
+        self.num_priors = list()
         for item in self.min_sizes:
             self.num_priors.append(len(item))
         # for aspect_ratio, min_size, max_size in zip(aspect_ratios, self.min_sizes, self.max_sizes):
@@ -34,47 +38,31 @@ class AnchorGeneratorSSD(object):
         #     else:
         #         self.num_priors.append((len(aspect_ratio) * 2 + 1) * len(_to_list(min_size)) + len(_to_list(max_size)))
 
-
     def __call__(self):
-        boxes = prior_box(self.min_sizes,self.steps, clip=False, image_size=(640, 640), offset=0.5)
-
-        # for input, min_size, max_size, aspect_ratio, step in zip(
-        #         inputs, self.min_sizes, self.max_sizes, self.aspect_ratios,
-        #         self.steps):
-        #     box, _ = ops.prior_box(
-        #         input=input,
-        #         image=image,
-        #         min_sizes=_to_list(min_size),
-        #         max_sizes=_to_list(max_size),
-        #         aspect_ratios=aspect_ratio,
-        #         flip=self.flip,
-        #         clip=self.clip,
-        #         steps=[step, step],
-        #         offset=self.offset,
-        #         min_max_aspect_ratios_order=self.min_max_aspect_ratios_order)
-        #     boxes.append(paddle.reshape(box, [-1, 4]))
+        boxes = self.prior_box(self.min_sizes,self.steps, clip=False, image_size=(640, 640), offset=0.5)
         return boxes
 
-def prior_box(min_sizes, steps, clip, image_size, offset):
-    feature_maps = [[ceil(image_size[0] / step), ceil(image_size[1] / step)] for step in steps]
-    anchors = []
-    for k, f in enumerate(feature_maps):
-        min_size = min_sizes[k]
-        for i, j in product(range(f[0]), range(f[1])):
-            # print(i, j)
-            for min_size_n in min_size:
-                s_kx = min_size_n / image_size[1]
-                s_ky = min_size_n / image_size[0]
-                dense_cx = [x * steps[k] / image_size[1] for x in [j + offset]]
-                dense_cy = [y * steps[k] / image_size[0] for y in [i + offset]]
-                for cy, cx in product(dense_cy, dense_cx):
-                    # ic(cy, cx)
-                    anchors += [cx, cy, s_kx, s_ky]
-    # back to torch land
-    output = torch.Tensor(anchors).view(-1, 4)
-    if clip:
-        output.clamp_(max=1, min=0)
-    return output
+    @staticmethod
+    def prior_box(min_sizes, steps, clip, image_size, offset):
+        feature_maps = [[ceil(image_size[0] / step), ceil(image_size[1] / step)] for step in steps]
+        anchors = []
+        for k, f in enumerate(feature_maps):
+            min_size = min_sizes[k]
+            for i, j in product(range(f[0]), range(f[1])):
+                # print(i, j)
+                for min_size_n in min_size:
+                    s_kx = min_size_n / image_size[1]
+                    s_ky = min_size_n / image_size[0]
+                    dense_cx = [x * steps[k] / image_size[1] for x in [j + offset]]
+                    dense_cy = [y * steps[k] / image_size[0] for y in [i + offset]]
+                    for cy, cx in product(dense_cy, dense_cx):
+                        # ic(cy, cx)
+                        anchors += [cx, cy, s_kx, s_ky]
+        # back to torch land
+        output = torch.Tensor(anchors).view(-1, 4)
+        if clip:
+            output.clamp_(max=1, min=0)
+        return output
 
 
 class SSDLoss(nn.Module):
@@ -108,8 +96,7 @@ class SSDLoss(nn.Module):
                  neg_mining=True,
                  neg_pos=7,
                  neg_overlap=0.35,
-                 encode_target=False,
-                 device='cpu'):
+                 encode_target=False):
         super(SSDLoss, self).__init__()
         self.num_classes = num_classes # num_classes default is 2: [face, bkg]
         self.threshold = overlap_thresh
@@ -120,14 +107,14 @@ class SSDLoss(nn.Module):
         self.negpos_ratio = neg_pos
         self.neg_overlap = neg_overlap
         self.variance = [0.1, 0.2]
-        self.device = device
-        self.priors = AnchorGeneratorSSD(
-            steps=[8, 16],
-            aspect_ratios=[[1.], [1.]],
-            min_sizes=[[16, 24], [32, 48, 64, 80, 96, 128]],  # 1:8 2:16
-            offset=0.5,
-            flip=False
-        )().to(self.device)
+
+        # self.priors = AnchorGeneratorSSD(
+        #     steps=[8, 16],
+        #     aspect_ratios=[[1.], [1.]],
+        #     min_sizes=[[16, 24], [32, 48, 64, 80, 96, 128]],  # 1:8 2:16
+        #     offset=0.5,
+        #     flip=False
+        # )().to(self.device)
 
 
     def priors_match_targets(self, targets, priors):
@@ -171,7 +158,7 @@ class SSDLoss(nn.Module):
         return loc, conf
 
 
-    def forward(self, predictions, targets):
+    def forward(self, predictions, targets, priors):
         """Multibox Loss
         Args:
             predictions (tuple): A tuple containing loc preds, conf preds
@@ -179,21 +166,22 @@ class SSDLoss(nn.Module):
             targets (list): Ground truth boxes and labels for a batch, each batch's shape: list(torch.size(num_ogjs, 5), ...)
         """
         loc_data, conf_data = predictions
+        device = loc_data.device
         batch_size = loc_data.size(0)
         prior_size = self.priors.size(0)
 
         # match priors (default boxes) and ground truth boxes
         # loc_t = torch.Tensor(batch_size, prior_size, 4)
-        loc_t = torch.zeros((batch_size, prior_size, 4), device=self.device, dtype=torch.float32)
+        loc_t = torch.zeros((batch_size, prior_size, 4), device=device, dtype=torch.float32)
         # conf_t = torch.LongTensor(batch_size, prior_size)
-        conf_t = torch.zeros((batch_size, prior_size), device=self.device, dtype=torch.int64)
+        conf_t = torch.zeros((batch_size, prior_size), device=device, dtype=torch.int64)
 
         # iterate each batch
         for batch_idx in range(batch_size):
             # truths = targets[idx][:, :4]
             # labels = targets[idx][:, -1]
             # landms = targets[idx][:, 4:14].data
-            loc, conf = self.priors_match_targets(targets[batch_idx], self.priors)
+            loc, conf = self.priors_match_targets(targets[batch_idx], priors)
             loc_t[batch_idx] = loc
             conf_t[batch_idx] = conf
 
