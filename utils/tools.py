@@ -103,19 +103,21 @@ def check_file(file):
 
 
 def create_workspace(cfg, resume=False):
+    save_path = cfg['save_path']
+    proj_name = cfg['proj_name']
     if resume:
         if 'weights_path' not in cfg:
-            weights_dir = get_latest_run(cfg.save_path)
+            weights_dir = get_latest_run(save_path)
             assert weights_dir != '', \
-                'last weights not exist in current resume path: {}'.format(os.path.abspath(cfg.save_path))
+                'last weights not exist in current resume path: {}'.format(os.path.abspath(save_path))
             log_dir = Path(weights_dir).parent.parent.as_posix()
         else:
             assert cfg.weights_path != '' and cfg.weights_path is not None, 'The Key "weights_path" is illegal in .yaml File'
-            weights_dir = check_file(cfg.weights_path)
-            log_dir = increment_path(Path(cfg.save_path) / '{}_exp'.format(cfg.proj_name), exist_ok=False)
+            weights_dir = check_file(cfg['weights_path'])
+            log_dir = increment_path(Path(save_path) / '{}_exp'.format(proj_name), exist_ok=False)
     else:
         # mkdir(rank, work_fold)
-        log_dir = increment_path(Path(cfg.save_path) / '{}_exp'.format(cfg.proj_name), exist_ok=False)
+        log_dir = increment_path(Path(save_path) / '{}_exp'.format(proj_name), exist_ok=False)
         weights_dir = (Path(log_dir) / 'weights/last.pt').as_posix()
         (Path(log_dir) / 'weights').mkdir(parents=True)
     return log_dir, weights_dir

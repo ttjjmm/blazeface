@@ -42,6 +42,7 @@ def load_config(cfg_path):
         file_cfg = yaml.load(f, Loader=yaml.Loader)
 
     # config = yaml.load(open(cfg_path, 'rb'), Loader=yaml.Loader)
+
     return file_cfg
 
 
@@ -59,17 +60,16 @@ class Trainer(object):
         self.logger = None
         self.log_dir = None
         self.weights_dir = None
+        # workspace steup
+        self.initial_setup(cfgs['work'])
+        # create network
         self.model = build_model(model_cfg).to(self.device)
 
         self.train_loader = build_dataloader(data_cfg['train'], mode='train')
         # self.val_loader = build_dataloader(data_cfg['val'], mode='val')
 
-        # workspace steup
 
 
-        # matric
-
-        # logger
     def initial_setup(self, cfg):
         self.log_dir, self.weights_dir = create_workspace(cfg, self.resume)
         self.logger = Logger(self.log_dir, use_tensorboard=True)
@@ -98,7 +98,7 @@ class Trainer(object):
 def main():
     args = parse_args()
 
-    # t = Trainer(arg)
+    t = Trainer(args)
     # t.train()
     pass
 

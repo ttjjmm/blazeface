@@ -1,5 +1,7 @@
 
-workspace: run
+work:
+  proj_name: blazeface
+  save_path: workspace
 
 
 model:
