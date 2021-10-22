@@ -4,14 +4,14 @@ import argparse
 import cv2
 import numpy as np
 from model import build_model
-from data.operators import Resize, Pad
+from data.operators import Resize
 
 import matplotlib.pyplot as plt
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, default='config/blazeface.yaml',
+    parser.add_argument('--cfg', type=str, default='config/blazeface_fpn_ssh.yaml',
                         help='model configuration file path')
     parser.add_argument('--device', type=str, default='cuda:0',
                         help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -38,9 +38,7 @@ class FaceDetector(object):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         data = {'image': img, 'im_shape': self.size}
         resize = Resize(self.size)
-        pad = Pad(self.size)
         data = resize(data)
-        data = pad(data)
 
         img = data['image']
 
@@ -51,9 +49,7 @@ class FaceDetector(object):
         img = torch.from_numpy(np.expand_dims(img, axis=0)).to(torch.float32)
 
         data['image'] = img
-
         return data
-
 
     @staticmethod
     def visualize(dets, raw_img):
@@ -69,17 +65,13 @@ class FaceDetector(object):
         plt.imshow(raw_img)
         plt.show()
 
-
     def detect(self):
         image_info = self.preprocess()
         image = image_info['image'].to(self.device)
         self.model.eval()
         with torch.no_grad():
             dets = self.model.inference(image)
-
         self.visualize(dets, image_info['raw_img'])
-
-
         return 0
 
 
