@@ -3,7 +3,6 @@ work:
   proj_name: blazeface
   save_path: workspace
 
-
 model:
   architecture: BlazeFace # blazeface_1000e
   pretrain_weights: https://paddledet.bj.bcebos.com/models/pretrained/blazenet_pretrain.pdparams
@@ -51,7 +50,6 @@ model:
       nms_threshold: 0.3
       nms_top_k: 5000
       nms_eta: 1.0
-
 
 data:
   train:
