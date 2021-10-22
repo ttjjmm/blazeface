@@ -8,6 +8,7 @@ model:
 
   BlazeFace:
     backbone: BlazeNet
+    neck: BlazeNeck
     head: FaceHead
     post_process: BBoxPostProcess
     loss: SSDLoss
@@ -30,7 +31,7 @@ model:
     padding: 1
 
   SSDLoss:
-    overlap_threshold: 0.35
+    overlap_thresh: 0.35
 
   AnchorGeneratorSSD:
     steps: [ 8., 16. ]

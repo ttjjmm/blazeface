@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 import glob
 import os
+import yaml
 import re
 import torch
 import torch.nn.functional as F
@@ -9,6 +10,10 @@ from utils.flops_counter import get_model_complexity_info, flops_to_string, para
 # from icecream import ic
 
 
+def load_config(cfg_path):
+    with open(cfg_path) as f:
+        file_cfg = yaml.load(f, Loader=yaml.Loader)
+    return file_cfg
 
 
 class SSDBox(object):

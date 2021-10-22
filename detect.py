@@ -3,8 +3,10 @@ import torch
 import argparse
 import cv2
 import numpy as np
+
 from model import build_model
 from data.operators import Resize
+from utils import load_config
 
 import matplotlib.pyplot as plt
 
@@ -27,8 +29,9 @@ def parse_args():
 
 class FaceDetector(object):
     def __init__(self, args):
+        cfg = load_config(args.cfg)
         self.device = args.device
-        self.model = build_model(args.cfg).to(self.device)
+        self.model = build_model(cfg['model']).to(self.device)
 
         self.size = args.size
         self.img_path = args.img_path

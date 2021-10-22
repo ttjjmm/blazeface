@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 
 
-__all__ = ['Pipeline']
+__all__ = ['Pipeline', 'Resize']
 
 
 class BboxError(ValueError):

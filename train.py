@@ -7,7 +7,9 @@ from tqdm import tqdm
 
 from model import build_model
 from data import build_dataloader
-from utils import create_workspace, Logger
+from utils import create_workspace, Logger, load_config
+
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -37,18 +39,6 @@ def init_seeds(seed=0):
         torch.backends.cudnn.benchmark = False
 
 
-def load_config(cfg_path):
-    with open(cfg_path) as f:
-        file_cfg = yaml.load(f, Loader=yaml.Loader)
-
-    # config = yaml.load(open(cfg_path, 'rb'), Loader=yaml.Loader)
-
-    return file_cfg
-
-
-# def
-
-
 class Trainer(object):
     def __init__(self, args):
 
@@ -67,7 +57,6 @@ class Trainer(object):
 
         self.train_loader = build_dataloader(data_cfg['train'], mode='train')
         # self.val_loader = build_dataloader(data_cfg['val'], mode='val')
-
 
 
     def initial_setup(self, cfg):
