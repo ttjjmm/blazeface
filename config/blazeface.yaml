@@ -19,9 +19,10 @@ model:
                             [96, 24, 96, 2], [96, 24, 96], [96, 24, 96]]
     act: hard_swish
 
-  #BlazeNeck:
-  #  neck_type : fpn_ssh
-  #  in_channels: [96, 96]
+#  BlazeNeck:
+#    neck_type : fpn_ssh
+#    in_channels: [96, 96]
+
   FaceHead:
     in_channels: [96, 96]
     num_classes: 1
