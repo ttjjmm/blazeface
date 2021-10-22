@@ -108,14 +108,6 @@ class SSDLoss(nn.Module):
         self.neg_overlap = neg_overlap
         self.variance = [0.1, 0.2]
 
-        # self.priors = AnchorGeneratorSSD(
-        #     steps=[8, 16],
-        #     aspect_ratios=[[1.], [1.]],
-        #     min_sizes=[[16, 24], [32, 48, 64, 80, 96, 128]],  # 1:8 2:16
-        #     offset=0.5,
-        #     flip=False
-        # )().to(self.device)
-
 
     def priors_match_targets(self, targets, priors):
         """

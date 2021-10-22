@@ -42,15 +42,8 @@ model:
     clip: False
 
   BBoxPostProcess:
-    decode:
-      name: SSDBox
-    nms:
-      name: MultiClassNMS
-      keep_top_k: 750
-      score_threshold: 0.01
-      nms_threshold: 0.3
-      nms_top_k: 5000
-      nms_eta: 1.0
+    iou_thr: 0.7
+    nms_thr: 0.4,
 
 
 data:

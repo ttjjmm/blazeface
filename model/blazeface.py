@@ -53,16 +53,8 @@ class BlazeFace(nn.Module):
 
     def inference(self, inputs):
         preds, anchors = self(inputs)
-        pred_boxes = decode(preds[0].squeeze(0), anchors, [0.1, 0.2])
-        pred_scores = preds[1].squeeze(0)
-        det_bboxes, det_labels = multiclass_nms(
-            pred_boxes,
-            pred_scores,
-            score_thr=0.1,
-            nms_cfg=dict(type='nms', iou_threshold=0.4),
-            max_num=1000)
-        # ic(det_bboxes.shape, det_labels.shape)
-        dets = det_bboxes * torch.tensor([640, 640, 640, 640, 1], device=inputs.device)
+
+        dets = self.post_process(preds, anchors)
 
         return dets
 

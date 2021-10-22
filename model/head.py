@@ -39,6 +39,7 @@ class BlazeHead(nn.Module):
         # if isinstance(anchor_generator, dict):
         #     self.anchor_generator = AnchorGeneratorSSD(**anchor_generator)
 
+
         self.num_priors = self.anchor_generator.num_priors
         # print(self.num_priors)
         self.boxes = nn.ModuleList()
@@ -60,7 +61,7 @@ class BlazeHead(nn.Module):
             self.scores.append(score_conv)
 
 
-    def forward(self, feats, gt_bbox=None, gt_class=None):
+    def forward(self, feats, gt_bboxes=None):
         box_preds = []
         cls_scores = []
         # prior_boxes = []
@@ -80,15 +81,17 @@ class BlazeHead(nn.Module):
 
         box_preds = torch.cat(box_preds, dim=1)
         cls_scores = torch.cat(cls_scores, dim=1)
+
         if not torch.onnx.is_in_onnx_export():
             prior_boxes = self.anchor_generator()
             device = box_preds.device
             prior_boxes = prior_boxes.to(device)
         else:
             prior_boxes = None
+
         # for train
         if self.training:
-            return self.get_loss((box_preds, cls_scores), gt_bbox, gt_class, prior_boxes)
+            return self.get_loss((box_preds, cls_scores), gt_bboxes, prior_boxes)
         # for onnx export
         elif torch.onnx.is_in_onnx_export():
             return box_preds, F.softmax(cls_scores, dim=-1)
@@ -97,27 +100,8 @@ class BlazeHead(nn.Module):
             return (box_preds, F.softmax(cls_scores, dim=-1)), prior_boxes
 
 
-    def get_loss(self, preds, gt_bbox, gt_class, prior_boxes):
-        return self.loss(preds, gt_bbox, gt_class, prior_boxes)
+    def get_loss(self, preds, targets, prior_boxes):
+        return self.loss(preds, targets, prior_boxes)
 
 
 
-
-
-# if __name__ == '__main__':
-    # anchor = AnchorGeneratorSSD(
-    #     steps= [8, 16],
-    #     aspect_ratios= [[1.], [1.]],
-    #     min_sizes= [[16, 24], [32, 48, 64, 80, 96, 128]], # 1:8 2:16
-    #     offset= 0.5,
-    #     flip=False)
-    # print(anchor().shape)
-
-    # cfg = {'steps': [8, 16],
-    #     'aspect_ratios': [[1.], [1.]],
-    #     'min_sizes': [[16, 24], [32, 48, 64, 80, 96, 128]],
-    #     'offset': 0.5,
-    #     'flip':False}
-    #
-    # m = BlazeHead(cfg)
-    # print(m)
