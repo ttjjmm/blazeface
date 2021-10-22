@@ -7,7 +7,7 @@ from model.head import BlazeHead
 from model.post_process import SSDBox
 from utils.nms import multiclass_nms
 
-# from icecream import ic
+from icecream import ic
 
 
 class BlazeFace(nn.Module):
@@ -52,8 +52,9 @@ class BlazeFace(nn.Module):
             return preds, anchors
 
     def inference(self, inputs):
+        """infer one image -> preds[0].shape: torch.Size([1, 22400, 4])
+                              preds[1].shape: torch.Size([1, 22400, 2]) """
         preds, anchors = self(inputs)
-
         dets = self.post_process(preds, anchors)
 
         return dets

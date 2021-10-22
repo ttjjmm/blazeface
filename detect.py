@@ -17,7 +17,7 @@ def parse_args():
                         help='model configuration file path')
     parser.add_argument('--device', type=str, default='cuda:0',
                         help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--img_path', type=str, default='./samples/test.jpg',
+    parser.add_argument('--img_path', type=str, default='./samples/12_Group_Group_12_Group_Group_12_728.jpg',
                         help='detect sample image path')
     parser.add_argument('--size', default=(640, 640), type=tuple,
                         help='detect input image size')
@@ -32,7 +32,6 @@ class FaceDetector(object):
         cfg = load_config(args.cfg)
         self.device = args.device
         self.model = build_model(cfg['model']).to(self.device)
-
         self.size = args.size
         self.img_path = args.img_path
 

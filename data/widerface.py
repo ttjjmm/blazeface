@@ -205,6 +205,7 @@ class WiderFaceDataset(Dataset):
         img_info = self.data_infos[idx]
 
         img_name = img_info['filename']
+
         img_dir = os.path.join(self.img_path, img_name)
 
         img = cv2.cvtColor(cv2.imread(img_dir), cv2.COLOR_BGR2RGB)
@@ -219,7 +220,7 @@ class WiderFaceDataset(Dataset):
         }
         data = self.aug_pipeline(data)
         gt_bbox = np.concatenate([data['gt_bbox'], np.expand_dims(annos['labels'], axis=-1)], axis=1)
-        return {'image': data['image'], 'gt_bbox': torch.from_numpy(gt_bbox)}
+        return {'image': data['image'], 'gt_bbox': torch.from_numpy(gt_bbox), 'img_info': img_name}
         # exit(11)
 
         # img = data['image'].astype(np.uint8)
@@ -239,10 +240,12 @@ class WiderFaceDataset(Dataset):
     def collate(batch_samples):
         img_ls = list()
         bbox_ls = list()
+        img_info = list()
         for item in batch_samples:
             img_ls.append(item['image'])
             bbox_ls.append(item['gt_bbox'])
-        return torch.stack(img_ls, dim=0), bbox_ls
+            img_info.append(item['img_info'])
+        return {'images': torch.stack(img_ls, dim=0), 'gt_bboxes': bbox_ls, 'img_infos': img_info}
 
 
 

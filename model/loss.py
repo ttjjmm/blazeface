@@ -38,8 +38,8 @@ class AnchorGeneratorSSD(object):
         #     else:
         #         self.num_priors.append((len(aspect_ratio) * 2 + 1) * len(_to_list(min_size)) + len(_to_list(max_size)))
 
-    def __call__(self):
-        boxes = self.prior_box(self.min_sizes,self.steps, clip=False, image_size=(640, 640), offset=0.5)
+    def __call__(self, image_size=(640, 640)):
+        boxes = self.prior_box(self.min_sizes,self.steps, clip=False, image_size=image_size, offset=0.5)
         return boxes
 
     @staticmethod

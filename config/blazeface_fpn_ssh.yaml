@@ -69,7 +69,7 @@ data:
       drop_last: True
   val:
     dataset:
-      fold_path: 'data/widerface'
+      data_path: 'data/widerface'
       img_size: [640, 640]
       with_kp: False
       pipeline:
