@@ -50,13 +50,10 @@ class Normalize(object):
         im = im.astype(np.float32, copy=False)
         mean = np.array(self.mean)[np.newaxis, np.newaxis, :]
         std = np.array(self.std)[np.newaxis, np.newaxis, :]
-
         if self.is_scale:
             im = im / 255.0
-
         im -= mean
         im /= std
-
         sample['image'] = im
         return sample
 

@@ -42,7 +42,6 @@ class WiderFaceDataset(Dataset):
 
         self.data_infos = self.load_annotations(self.label_path)
 
-
         # print(self.anno_info)
         # print(self.label_path, self.img_path)
         # self.load_annotations(self.label_path)
@@ -51,7 +50,6 @@ class WiderFaceDataset(Dataset):
         #     'Resize': {'target_size': (640, 640), 'keep_ratio': True},
         #     'RandomFlip': {'prob': 0.5},
         # }
-        print(pipeline)
         self.aug_pipeline = Pipeline(pipeline)
 
 
@@ -222,7 +220,9 @@ class WiderFaceDataset(Dataset):
         gt_bbox = np.concatenate([data['gt_bbox'], np.expand_dims(annos['labels'], axis=-1)], axis=1)
         return {'image': data['image'],
                 'gt_bbox': torch.from_numpy(gt_bbox),
-                'img_info': [img_name, (w, h)]}
+                'img_info': img_name,
+                'org_size': np.array((w, h)),
+                'scale_factor': data['scale_factor']}
         # exit(11)
 
         # img = data['image'].astype(np.uint8)
@@ -240,14 +240,18 @@ class WiderFaceDataset(Dataset):
 
     @staticmethod
     def collate(batch_samples):
-        img_ls = list()
-        bbox_ls = list()
-        img_info = list()
-        for item in batch_samples:
-            img_ls.append(item['image'])
-            bbox_ls.append(item['gt_bbox'])
-            img_info.append(item['img_info'])
-        return {'images': torch.stack(img_ls, dim=0), 'gt_bboxes': bbox_ls, 'img_infos': img_info}
+        batch_dt = {key: list()  for key in batch_samples[0].keys()}
+        for idx in range(len(batch_samples)):
+            for k, v in batch_samples[idx].items():
+                batch_dt[k].append(v)
+        if 'image' in batch_dt:
+            batch_dt['image'] = torch.stack(batch_dt['image'], dim=0)
+        if 'org_size' in batch_dt:
+            batch_dt['org_size'] = np.stack(batch_dt['org_size'], axis=0)
+        if 'scale_factor' in batch_dt:
+            batch_dt['scale_factor'] = np.stack(batch_dt['scale_factor'], axis=0)
+        return batch_dt
+        # return {'images': torch.stack(img_ls, dim=0), 'gt_bboxes': bbox_ls, 'img_infos': img_info}
 
 
 
@@ -260,6 +264,6 @@ if __name__ == '__main__':
         }
     data = WiderFaceDataset(data_p, mode='train', min_size=20, with_kp=False, pipeline=kyw)
     x = data[12]
-    print(x)
+    # print(x)
 
 

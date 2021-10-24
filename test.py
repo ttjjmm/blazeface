@@ -12,7 +12,6 @@ from model.loss import AnchorGeneratorSSD
 from utils import load_config
 
 
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', type=str, default='config/blazeface_fpn_ssh.yaml',
@@ -31,30 +30,40 @@ def parse_args():
     return args
 
 
-
-
 class Evaluator(object):
-    def __init__(self, model, val_loader, priors, score_thr=0.01, nms_thr=0.4, device='cuda:0'):
+    def __init__(self, model, val_loader, priors, img_size=None, score_thr=0.2, nms_thr=0.4, device='cuda:0'):
         self.model = model.to(device)
         self.val_loader = val_loader
         self.post_process = SSDBox(iou_thr=score_thr, nms_thr=nms_thr)
-        self.anchors = priors
+        self.anchors = priors.to(device)
         self.device = device
+        self.img_size = img_size
 
     def eval(self):
         self.model.eval()
-        for idx, data in enumerate(self.val_loader):
+        for data in tqdm(self.val_loader, desc='Evalution Stage'):
+            dets = list()
+            imgs = data['image'].to(self.device)
+            imgs_info = data['img_info']
+            batch_szie = imgs.size(0)
 
-            imgs = data['images'].to(self.device)
             with torch.no_grad():
-                preds = self.model(imgs)
+                box_pred, score_pred = self.model(imgs)
+
+            for idx in range(batch_szie):
+                det_bboxes = self.post_process((box_pred[0].unsqueeze(0), score_pred[0].unsqueeze(0)), self.anchors)
+                print(det_bboxes.shape)
+
+
+
+                key, filename = imgs_info[idx].split('/')
+                print(key, filename)
+
             break
 
 
-
-    def __call__(self, *args, **kwargs):
+    def scale2orgsize(self, org_size, target_size):
         pass
-
 
 
 
@@ -62,14 +71,17 @@ def evaluate():
     args = parse_args()
     cfgs = load_config(args.cfg)
     data_cfg = cfgs['data'].copy()
-    img_size = data_cfg['val']['img_size']
+    anchor_cfg = cfgs['model']['AnchorGeneratorSSD']
+
+    img_size = data_cfg['val']['dataset']['img_size']
     device = args.device
-    prior = AnchorGeneratorSSD()
+    anchor_gen = AnchorGeneratorSSD(**anchor_cfg)
+    priors = anchor_gen(image_size=img_size)
     model = build_model(cfgs['model'].copy(), img_size)
     val_loader = build_dataloader(data_cfg['val'], mode='val')
 
     # define evaluator
-    evaluator = Evaluator(model, val_loader, args.score_thr, args.nms_thr, device)
+    evaluator = Evaluator(model, val_loader, priors, img_size, args.score_thr, args.nms_thr, device)
     evaluator.eval()
 
 

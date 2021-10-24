@@ -37,7 +37,7 @@ model:
     flip: False
     clip: False
   BBoxPostProcess:
-    iou_thr: 0.7
+    iou_thr: 0.2
     nms_thr: 0.4,
 
 data:
@@ -74,7 +74,7 @@ data:
         }
     loader:
       num_workers: 8
-      batch_size: 32
+      batch_size: 16
       shuffle: False
       pin_memory: True
       drop_last: False

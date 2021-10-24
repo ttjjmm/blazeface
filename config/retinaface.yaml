@@ -1,0 +1,82 @@
+work:
+  proj_name: retinaface
+  save_path: workspace
+
+model:
+  architecture: RetinaFace
+  pretrain_weights: https://paddledet.bj.bcebos.com/models/pretrained/blazenet_pretrain.pdparams
+
+  BlazeFace:
+    backbone: MobileNet
+    neck: FPN
+    head: FaceHead
+    loss: SSDLoss
+    anchor: AnchorGeneratorSSD
+    post_process: BBoxPostProcess
+
+  BlazeNet:
+    blaze_filters: [[24, 24], [24, 24], [24, 48, 2], [48, 48], [48, 48]]
+    double_blaze_filters: [[48, 24, 96, 2], [96, 24, 96], [96, 24, 96],
+                            [96, 24, 96, 2], [96, 24, 96], [96, 24, 96]]
+    act: hard_swish
+  BlazeNeck:
+    neck_type : fpn_ssh
+    in_channels: [96, 96]
+  FaceHead:
+    in_channels: [48, 48]
+    num_classes: 1
+    kernel_size: 3
+    padding: 1
+  SSDLoss:
+    overlap_thresh: 0.35
+  AnchorGeneratorSSD:
+    steps: [8., 16.]
+    aspect_ratios: [[1.], [1.]]
+    min_sizes: [[16.,24.], [32., 48., 64., 80., 96., 128.]]
+    offset: 0.5
+    flip: False
+    clip: False
+  BBoxPostProcess:
+    iou_thr: 0.7
+    nms_thr: 0.4,
+
+data:
+  train:
+    dataset:
+      data_path: 'data/widerface'
+      img_size: [640, 640]
+      min_size: 20
+      with_kp: False
+      pipeline:
+        { # add color
+          RandomDistort: {brightness: [0.5, 1.125, 0.875], random_apply: False},
+          Resize: {target_size: [640, 640], keep_ratio: True},
+          RandomFlip: {prob: 0.5},
+          Normalize: {mean: [123, 117, 104], std: [127.502231, 127.502231, 127.502231], is_scale: false},
+          Permute2Tensor: {}
+        }
+    loader:
+      num_workers: 8
+      batch_size: 32
+      shuffle: True
+      pin_memory: True
+      drop_last: True
+  val:
+    dataset:
+      data_path: 'data/widerface'
+      img_size: [640, 640]
+      with_kp: False
+      pipeline:
+        { # add color
+          Resize: {target_size: [640, 640], keep_ratio: True},
+          Normalize: {mean: [123, 117, 104], std: [127.502231, 127.502231, 127.502231], is_scale: false},
+          Permute2Tensor: {}
+        }
+    loader:
+      num_workers: 8
+      batch_size: 32
+      shuffle: False
+      pin_memory: True
+      drop_last: False
+
+

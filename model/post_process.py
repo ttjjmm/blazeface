@@ -33,7 +33,7 @@ class SSDBox(object):
             pred_scores,
             score_thr=self.iou_thr,
             nms_cfg=dict(type='nms', iou_threshold=self.iou_thr),
-            max_num=1000)
+            max_num=500)
         dets = det_bboxes * torch.tensor([im_shape[0], im_shape[1], im_shape[0], im_shape[1], 1],
                                          device=preds[0].device)
         return dets

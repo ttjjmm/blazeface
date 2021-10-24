@@ -42,7 +42,6 @@ class FaceDetector(object):
         else:
             self.anchor = None
             self.size = args.size
-
         self.img_path = args.img_path
 
     def preprocess(self):
@@ -51,6 +50,7 @@ class FaceDetector(object):
         priors = None
         if self.size is None:
             self.size = [img.shape[1], img.shape[0]]
+            # TODO channel order
             priors = self.anchor(self.size[::-1]).to(self.device)
         data = {'image': img, 'im_shape': self.size}
         if self.size is not None:
