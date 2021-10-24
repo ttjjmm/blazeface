@@ -45,6 +45,7 @@ class Trainer(object):
         cfgs = load_config(args.cfg)
         model_cfg = cfgs['model'].copy()
         data_cfg = cfgs['data'].copy()
+        self.img_size = data_cfg['train']['img_size']
         self.resume = args.resume
         self.device = args.device
         self.logger = None
@@ -53,7 +54,7 @@ class Trainer(object):
         # workspace steup
         self.initial_setup(cfgs['work'])
         # create network
-        self.model = build_model(model_cfg).to(self.device)
+        self.model = build_model(model_cfg, self.img_size).to(self.device)
 
         self.train_loader = build_dataloader(data_cfg['train'], mode='train')
         # self.val_loader = build_dataloader(data_cfg['val'], mode='val')

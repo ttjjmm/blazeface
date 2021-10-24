@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from data import build_dataloader
 from model import build_model
 from model.post_process import SSDBox
+from model.loss import AnchorGeneratorSSD
 from utils import load_config
 
 
@@ -33,10 +34,11 @@ def parse_args():
 
 
 class Evaluator(object):
-    def __init__(self, model, val_loader, iou_thr, nms_thr, device):
+    def __init__(self, model, val_loader, priors, score_thr=0.01, nms_thr=0.4, device='cuda:0'):
         self.model = model.to(device)
         self.val_loader = val_loader
-        self.post_process = SSDBox(iou_thr=iou_thr, nms_thr=nms_thr)
+        self.post_process = SSDBox(iou_thr=score_thr, nms_thr=nms_thr)
+        self.anchors = priors
         self.device = device
 
     def eval(self):
@@ -46,8 +48,9 @@ class Evaluator(object):
             imgs = data['images'].to(self.device)
             with torch.no_grad():
                 preds = self.model(imgs)
-                print(preds)
             break
+
+
 
     def __call__(self, *args, **kwargs):
         pass
@@ -59,12 +62,14 @@ def evaluate():
     args = parse_args()
     cfgs = load_config(args.cfg)
     data_cfg = cfgs['data'].copy()
+    img_size = data_cfg['val']['img_size']
     device = args.device
-    model = build_model(cfgs['model'].copy())
+    prior = AnchorGeneratorSSD()
+    model = build_model(cfgs['model'].copy(), img_size)
     val_loader = build_dataloader(data_cfg['val'], mode='val')
 
     # define evaluator
-    evaluator = Evaluator(model, val_loader, device)
+    evaluator = Evaluator(model, val_loader, args.score_thr, args.nms_thr, device)
     evaluator.eval()
 
 

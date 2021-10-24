@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 from model import build_model
+from model.loss import AnchorGeneratorSSD
 from data.operators import Resize
 from utils import load_config
 
@@ -21,6 +22,8 @@ def parse_args():
                         help='detect sample image path')
     parser.add_argument('--size', default=(640, 640), type=tuple,
                         help='detect input image size')
+    parser.add_argument('--org_size', nargs='?', const=True, default=True,
+                        help='resume most recent training')
     # parser.add_argument('--seed', type=int, default=None,
     #                     help='random seed')
     args = parser.parse_args()
@@ -31,19 +34,29 @@ class FaceDetector(object):
     def __init__(self, args):
         cfg = load_config(args.cfg)
         self.device = args.device
-        self.model = build_model(cfg['model']).to(self.device)
-        self.size = args.size
+        cfg_model = cfg['model'].copy()
+        self.model = build_model(cfg_model, args.size).to(self.device)
+        if args.org_size or args.size is None:
+            self.anchor = AnchorGeneratorSSD(**cfg_model['AnchorGeneratorSSD'])
+            self.size = None
+        else:
+            self.anchor = None
+            self.size = args.size
+
         self.img_path = args.img_path
 
     def preprocess(self):
         img = cv2.imread(self.img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        priors = None
+        if self.size is None:
+            self.size = [img.shape[1], img.shape[0]]
+            priors = self.anchor(self.size[::-1]).to(self.device)
         data = {'image': img, 'im_shape': self.size}
-        resize = Resize(self.size)
-        data = resize(data)
-
+        if self.size is not None:
+            resize = Resize(self.size)
+            data = resize(data)
         img = data['image']
-
         raw_img = img.astype(np.uint8)
         data['raw_img'] = raw_img
         img = (img - [123, 117, 104]) / [127.502231, 127.502231, 127.502231]
@@ -51,7 +64,7 @@ class FaceDetector(object):
         img = torch.from_numpy(np.expand_dims(img, axis=0)).to(torch.float32)
 
         data['image'] = img
-        return data
+        return data, priors
 
     @staticmethod
     def visualize(dets, raw_img):
@@ -63,16 +76,16 @@ class FaceDetector(object):
             cx = b[0]
             cy = b[1] + 12
             cv2.putText(raw_img, text, (cx, cy), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 0))
-
         plt.imshow(raw_img)
         plt.show()
 
     def detect(self):
-        image_info = self.preprocess()
+        image_info, priors = self.preprocess()
+        img_size = self.size if priors is not None else None
         image = image_info['image'].to(self.device)
         self.model.eval()
         with torch.no_grad():
-            dets = self.model.inference(image)
+            dets = self.model.inference(image, priors, img_size)
         self.visualize(dets, image_info['raw_img'])
         return 0
 

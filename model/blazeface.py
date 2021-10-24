@@ -5,6 +5,7 @@ from model.blazenet import BlazeNet
 from model.neck import BlazeNeck
 from model.head import BlazeHead
 from model.post_process import SSDBox
+from model.loss import AnchorGeneratorSSD
 from utils.nms import multiclass_nms
 
 from icecream import ic
@@ -15,13 +16,15 @@ class BlazeFace(nn.Module):
     BlazeFace: Sub-millisecond Neural Face Detection on Mobile GPUs,
                see https://arxiv.org/abs/1907.05047
     """
-    def __init__(self, cfg_backbone, cfg_neck, cfg_head, cfg_post):
+    def __init__(self, cfg_backbone, cfg_neck, cfg_head, cfg_post, cfg_anchor, img_size):
         super(BlazeFace, self).__init__()
         self.backbone = BlazeNet(**cfg_backbone)
         self.is_neck = cfg_neck is not None
         if self.is_neck:
             self.neck = BlazeNeck(**cfg_neck)
-
+        self.anchors_gen = AnchorGeneratorSSD(**cfg_anchor)
+        cfg_head['num_priors'] = self.anchors_gen.num_priors
+        self.priors = self.anchors_gen(img_size)
         self.blaze_head = BlazeHead(**cfg_head)
         self.post_process = SSDBox(**cfg_post)
 
@@ -34,7 +37,7 @@ class BlazeFace(nn.Module):
         print('=> loaded pretrained weights from path: {}.'.format(path))
         del ckpt
 
-    def forward(self, inputs):
+    def forward(self, inputs, targets=None):
         # Backbone
         feats = self.backbone(inputs)
         # neck
@@ -45,32 +48,20 @@ class BlazeFace(nn.Module):
         # blaze Head
         if self.training:
             return self.blaze_head(feats,
-                                   inputs['gt_bbox'],
-                                   inputs['gt_class'])
+                                   targets,
+                                   self.anchors.to(feats[0].device))
         else:
-            preds, anchors = self.blaze_head(feats) # preds => [box, cls]
-            return preds, anchors
+            return self.blaze_head(feats) # preds => [box, cls]
+            # return preds, anchors
 
-    def inference(self, inputs):
+    def inference(self, inputs, anchors=None, img_size=None):
         """infer one image -> preds[0].shape: torch.Size([1, 22400, 4])
                               preds[1].shape: torch.Size([1, 22400, 2]) """
-        preds, anchors = self(inputs)
-        dets = self.post_process(preds, anchors)
-
+        if anchors is None:
+            anchors = self.priors.to(inputs.device)
+        preds = self(inputs)
+        dets = self.post_process(preds, anchors, img_size)
         return dets
-
-
-    # def get_loss(self, ):
-    #     return {"loss": self._forward()}
-    #
-    # def get_pred(self):
-    #     bbox_pred, bbox_num = self._forward()
-    #     output = {
-    #         "bbox": bbox_pred,
-    #         "bbox_num": bbox_num,
-    #     }
-    #     return output
-
 
 
 # Adapted from https://github.com/Hakuyume/chainer-ssd

@@ -39,7 +39,7 @@ class AnchorGeneratorSSD(object):
         #         self.num_priors.append((len(aspect_ratio) * 2 + 1) * len(_to_list(min_size)) + len(_to_list(max_size)))
 
     def __call__(self, image_size=(640, 640)):
-        boxes = self.prior_box(self.min_sizes,self.steps, clip=False, image_size=image_size, offset=0.5)
+        boxes = self.prior_box(self.min_sizes, self.steps, clip=False, image_size=image_size, offset=0.5)
         return boxes
 
     @staticmethod
@@ -315,26 +315,28 @@ def intersect(box_a, box_b):
 
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
+#
+#
+#     loss = SSDLoss(device='cuda:0')
+#
+#
+#     bbox = [
+#         [0.5576172, 0.29589844, 0.5800781, 0.3251953, 1],
+#         [0.46875, 0.29882812, 0.4951172, 0.3330078, 1],
+#         [0.43359375, 0.2919922, 0.4560547, 0.32421875, 1],
+#         [0.4189453, 0.2685547, 0.44140625, 0.296875, 1],
+#         [0.39160156, 0.3310547, 0.41796875, 0.36523438, 1],
+#         [0.3408203, 0.30371094, 0.36621094, 0.3330078, 1],
+#         [0.3154297, 0.30664062, 0.34277344, 0.3359375, 1],
+#     ]
+#
+#     pred = [torch.randn((1, 22400, 4), device='cuda:0'), torch.randn((1, 22400, 2), device='cuda:0')]
+#     gt_box = torch.from_numpy(np.array(bbox))
+#     gt_box = torch.unsqueeze(gt_box, dim=0)
+#     loss(pred, gt_box.to('cuda:0'))
 
 
-    loss = SSDLoss(device='cuda:0')
-
-
-    bbox = [
-        [0.5576172, 0.29589844, 0.5800781, 0.3251953, 1],
-        [0.46875, 0.29882812, 0.4951172, 0.3330078, 1],
-        [0.43359375, 0.2919922, 0.4560547, 0.32421875, 1],
-        [0.4189453, 0.2685547, 0.44140625, 0.296875, 1],
-        [0.39160156, 0.3310547, 0.41796875, 0.36523438, 1],
-        [0.3408203, 0.30371094, 0.36621094, 0.3330078, 1],
-        [0.3154297, 0.30664062, 0.34277344, 0.3359375, 1],
-    ]
-
-    pred = [torch.randn((1, 22400, 4), device='cuda:0'), torch.randn((1, 22400, 2), device='cuda:0')]
-    gt_box = torch.from_numpy(np.array(bbox))
-    gt_box = torch.unsqueeze(gt_box, dim=0)
-    loss(pred, gt_box.to('cuda:0'))
     # gt_label = torch.randn((4, 16, 1))
     #
     # loss = SSDLoss()

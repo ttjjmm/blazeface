@@ -3,7 +3,7 @@ from model.blazeface import BlazeFace
 import yaml
 import torch
 
-def build_model(config):
+def build_model(config, img_size):
     arch = config.pop('architecture')
     if arch in config:
         arch_cfg = config[arch]
@@ -15,13 +15,17 @@ def build_model(config):
         anchor = arch_cfg['anchor']
     else:
         raise AttributeError("object has no attribute '{}'".format(arch))
-
     cfg_backbone = config[backbone]
     cfg_neck = config[neck] if neck else None
     cfg_head = config[head]
     cfg_postprocess = config[postprocess]
+    cfg_anchor = config[anchor]
     cfg_head['cfg_loss'] = config[loss]
-    cfg_head['cfg_anchor'] = config[anchor]
 
-    model = BlazeFace(cfg_backbone, cfg_neck, cfg_head, cfg_postprocess)
+    model = BlazeFace(cfg_backbone,
+                      cfg_neck,
+                      cfg_head,
+                      cfg_postprocess,
+                      cfg_anchor,
+                      img_size)
     return model

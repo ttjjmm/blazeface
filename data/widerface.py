@@ -210,17 +210,19 @@ class WiderFaceDataset(Dataset):
 
         img = cv2.cvtColor(cv2.imread(img_dir), cv2.COLOR_BGR2RGB)
         assert img is not None, img_dir
-
+        h, w = img.shape[:2]
         annos = self.get_ann_info(idx)
 
         # gt_bbox = np.concatenate([annos['bboxes'], np.expand_dims(annos['labels'], axis=-1)], axis=1)
-
+        # ic(annos)
         data = {
             'image': img, 'gt_bbox': annos['bboxes']
         }
         data = self.aug_pipeline(data)
         gt_bbox = np.concatenate([data['gt_bbox'], np.expand_dims(annos['labels'], axis=-1)], axis=1)
-        return {'image': data['image'], 'gt_bbox': torch.from_numpy(gt_bbox), 'img_info': img_name}
+        return {'image': data['image'],
+                'gt_bbox': torch.from_numpy(gt_bbox),
+                'img_info': [img_name, (w, h)]}
         # exit(11)
 
         # img = data['image'].astype(np.uint8)
@@ -251,7 +253,7 @@ class WiderFaceDataset(Dataset):
 
 
 if __name__ == '__main__':
-    data_p = '/home/ubuntu/Documents/pycharm/blazeface/data/widerface'
+    data_p = '/home/tjm/Documents/python/pycharmProjects/blazeface/data/widerface'
     kyw = {
             'Resize': {'target_size': (640, 640), 'keep_ratio': True},
             'RandomFlip': {'prob': 0.5},
