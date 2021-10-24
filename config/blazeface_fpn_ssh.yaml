@@ -67,7 +67,7 @@ data:
       img_size: [640, 640]
       with_kp: False
       pipeline:
-        { # add color
+        {
           Resize: {target_size: [640, 640], keep_ratio: True},
           Normalize: {mean: [123, 117, 104], std: [127.502231, 127.502231, 127.502231], is_scale: false},
           Permute2Tensor: {}

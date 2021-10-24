@@ -12,7 +12,7 @@ import pickle
 import argparse
 import numpy as np
 from scipy.io import loadmat
-from evaluate.bbox import bbox_overlaps
+from utils.evaluate.bbox import bbox_overlaps
 from IPython import embed
 
 
@@ -212,7 +212,7 @@ def voc_ap(rec, prec):
     return ap
 
 
-def eval_map(pred, all, iou_thresh=0.5, gt_path="evaluate/ground_truth"):
+def  eval_map(pred, all, iou_thresh=0.5, gt_path='utils/evaluate/ground_truth'):
     norm_score(pred)
     facebox_list, event_list, file_list, hard_gt_list, medium_gt_list, easy_gt_list = get_gt_boxes(gt_path)
     event_num = len(event_list)
@@ -237,7 +237,7 @@ def eval_map(pred, all, iou_thresh=0.5, gt_path="evaluate/ground_truth"):
 
                 pred_list = pred[event_name]  
                 sub_gt_list = gt_list[i][0]
-                print("shape of sub_gt_list is: ",sub_gt_list.shape)
+                # print("shape of sub_gt_list is: ",sub_gt_list.shape)
                 gt_bbx_list = facebox_list[i][0]
 
                 for j in range(len(img_list)):
@@ -260,7 +260,7 @@ def eval_map(pred, all, iou_thresh=0.5, gt_path="evaluate/ground_truth"):
                     _img_pr_info = img_pr_info(thresh_num, pred_info, proposal_list, pred_recall)
 
                     pr_curve += _img_pr_info
-            print("error_count is: ",error_count)
+            # print("error_count is: ", error_count)
             pr_curve = dataset_pr_info(thresh_num, pr_curve, count_face)
 
             propose = pr_curve[:, 0]
