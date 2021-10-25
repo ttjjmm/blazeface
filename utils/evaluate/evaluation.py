@@ -172,6 +172,7 @@ def img_pr_info(thresh_num, pred_info, proposal_list, pred_recall):
     for t in range(thresh_num):
 
         thresh = 1 - (t+1)/thresh_num
+        # print(pred_info)
         r_index = np.where(pred_info[:, 4] >= thresh)[0]
         if len(r_index) == 0:
             pr_info[t, 0] = 0
@@ -212,7 +213,7 @@ def voc_ap(rec, prec):
     return ap
 
 
-def  eval_map(pred, all, iou_thresh=0.5, gt_path='utils/evaluate/ground_truth'):
+def  eval_map(pred, all, iou_thresh=0.5, gt_path='/home/ubuntu/Documents/pycharm/Pytorch_Retinaface/utils/evaluate/ground_truth'):
     norm_score(pred)
     facebox_list, event_list, file_list, hard_gt_list, medium_gt_list, easy_gt_list = get_gt_boxes(gt_path)
     event_num = len(event_list)

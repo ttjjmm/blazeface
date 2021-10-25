@@ -1,4 +1,4 @@
-import math
+import os
 import argparse
 import cv2
 import numpy as np
@@ -12,6 +12,8 @@ from model.post_process import SSDBox
 from model.loss import AnchorGeneratorSSD
 from utils import load_config
 from utils.evaluate import evaluation
+
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -48,7 +50,7 @@ class Evaluator(object):
             imgs_info = data['img_info']
             batch_szie = imgs.size(0)
             scale_factor = data['scale_factor']
-            pad_size = self.padsize(self.img_size, data['org_size'], scale_factor)
+            pad_size = self.get_padsize(self.img_size, data['org_size'], scale_factor)
 
             with torch.no_grad():
                 box_pred, score_pred = self.model(imgs)
@@ -58,21 +60,34 @@ class Evaluator(object):
                                                 score_pred[idx].unsqueeze(0)),
                                                self.anchors).cpu().numpy()
                 det_bboxes[:, [0, 1]] = (det_bboxes[:, [0, 1]] - pad_size[idx]) / scale_factor[idx]
-                det_bboxes[:, [2, 3]] = det_bboxes[:, [2, 3]] - pad_size[idx] / scale_factor[idx]
+                det_bboxes[:, [2, 3]] = (det_bboxes[:, [2, 3]] - pad_size[idx]) / scale_factor[idx]
 
                 key, filename = imgs_info[idx].split('/')
-
+                filename = filename.split('.')[0]
+                #-------------- debug ---------------#
+                # if idx == 2:
+                #     img_path = os.path.join('/home/ubuntu/Documents/pycharm/blazeface/data/widerface/val/images', imgs_info[idx])
+                #     img = cv2.imread(img_path)
+                #     det_bboxes = det_bboxes[:, :4].astype(np.int)
+                #     for b in det_bboxes:
+                #         cv2.rectangle(img, (b[0], b[1]), (b[2], b[3]), (0, 255, 255), 2)
+                #     plt.imshow(img)
+                #     plt.show()
+                #     ic(scale_factor[idx], pad_size[idx], imgs[idx].shape, img.shape)
+                #     exit(111)
+                # -----------------------------------#
                 if key not in all_result_dict:
                     all_result_dict[key] = dict()
-                det_bboxes = np.array(det_bboxes).astype(np.float64)
                 det_bboxes[:, 2:4] = det_bboxes[:, 2:4] - det_bboxes[:, :2]
+                det_bboxes = det_bboxes.astype(np.float64)
                 all_result_dict[key][filename] = det_bboxes
 
         aps = evaluation.eval_map(all_result_dict, all=False)
         print('Easy:{:.4f}, Medium:{:.4f}, Hard:{:.4f}'.format(*aps))
+        return aps
 
     @staticmethod
-    def padsize(target_size, org_size, scale_factor):
+    def get_padsize(target_size, org_size, scale_factor):
         if isinstance(target_size, (list, tuple)):
             target_size = np.array(target_size)
         elif isinstance(target_size, (int, float)):
@@ -85,11 +100,11 @@ class Evaluator(object):
 
 
 def evaluate():
+
     args = parse_args()
     cfgs = load_config(args.cfg)
     data_cfg = cfgs['data'].copy()
     anchor_cfg = cfgs['model']['AnchorGeneratorSSD']
-
     img_size = data_cfg['val']['dataset']['img_size']
     device = args.device
     anchor_gen = AnchorGeneratorSSD(**anchor_cfg)
